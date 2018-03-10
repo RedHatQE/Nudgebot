@@ -1,0 +1,3 @@
+PyGithub==1.37
+Jinja2==2.10
+celery==4.1.0
