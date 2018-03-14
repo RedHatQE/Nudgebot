@@ -3,7 +3,8 @@ import os
 from celery.schedules import crontab
 from jinja2 import Template
 
-from nudgebot.bot import Bot
+from nudgebot.utils import send_email
+from project_template.config import Config  # ContextProcessor
 
 
 class Report(object):
@@ -27,22 +28,29 @@ class Report(object):
     RECEIVERS = []
 
     def __init__(self):
+        assert isinstance(self.NAME, (str, type(None))), 'Report NAME should be an str, not {}'.format(self.NAME)
         assert self.CRONTAB is None or isinstance(self.CRONTAB, crontab), \
             'CRONTAB should be either None or celery.schedule.crontab, found: {}'.format(self.CRONTAB)
         assert self.SUBJECT, 'SUBJECT should be defined in the report class'
         assert self.TEMPLATE, 'TEMPLATE should be defined in the report class'
         assert self.RECEIVERS, 'No receivers for the report, please define RECEIVERS'
 
+    def __repr__(self):
+        return '<{} name="{}", subject="{}", >'
+
     @classmethod
     def get_name(cls):
-        return cls.__name__
+        """Returns the name of the report
+            @rtype: `str`
+        """
+        return cls.NAME or cls.__name__
 
     @property
     def data(self):
         """In this function we should implement the data calculation for the report.
         This data will be used for the template. The property should return the data dictionary
         used for the report rendering
-        :rtype: dict
+            @rtype: `dict`
         """
         return NotImplementedError()
 
@@ -61,6 +69,9 @@ class Report(object):
             template_raw = self.TEMPLATE
         return Template(template_raw).render(data=self.data)
 
-    def send(self):
-        """Sending the report"""
-        Bot().send_email(self.RECEIVERS, self.subject, self.body, text_format=self.TEXT_FORMAT)
+    def send(self, receivers=None):
+        """Sending the report to the <receivers>.
+            @keyword receivers: (`list` of `str`) list of the addresses of the report receivers,
+                                Uses the default self.RECEIVERS if not provided
+        """
+        return send_email(Config(), receivers or self.RECEIVERS, self.subject, self.body, text_format=self.TEXT_FORMAT)

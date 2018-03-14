@@ -1,0 +1,8 @@
+github:
+  org: <organization>
+  repo: <repository>
+  reviewers:
+    - # Reviewer
+maintainers: # Used for recieve emails about failures
+  - <maintainer_email>
+logging_level: INFO  # Available levels are described here: https://docs.python.org/3/library/logging.html#levels

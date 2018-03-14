@@ -3,4 +3,7 @@
 *.swp
 *.project
 *.pydevproject
-
+config.yaml
+credentials.yaml
+nudgebot/tests/config/*
+.pytest_cache/*
