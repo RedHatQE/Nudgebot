@@ -27,7 +27,7 @@ class toggled_cached_property(object):
 
 
 class ToggledCachedProperties(AttributeDict):
-    """"""
+    """Object that contains `toggled_cached_property` objects"""
 
     def uncache_all(self):
         """Un-cache all properties"""

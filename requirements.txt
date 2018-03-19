@@ -3,3 +3,4 @@ Jinja2==2.10
 celery==4.1.0
 PyYAML==3.12
 pytest==3.4.2
+cached-property==1.4.0

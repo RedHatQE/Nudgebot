@@ -2,7 +2,8 @@ import os
 import yaml
 
 from nudgebot.base import AttributeDict
-from nudgebot.exceptions import MissingConfigurationFileException
+from nudgebot.exceptions import (MissingConfigurationFileException,
+                                 MissingConfigurationAttributeException)
 
 
 class Config(object):
@@ -14,9 +15,11 @@ class Config(object):
         @param dirpath: `str` the path of the config directory.
         """
         self.dirpath = dirpath
+        self._data = AttributeDict()
+        self._first_reload_done = False
 
     def reload(self):
-        self._data = AttributeDict()
+        self._first_reload_done = True
         for p in self.CONFIG_FILES:
             conf_name = os.path.splitext(p)[0]
             fp = os.path.join(self.dirpath, p)
@@ -26,9 +29,16 @@ class Config(object):
                 self._data[conf_name] = AttributeDict.attributize_dict(yaml.load(confile))
 
     def __getitem__(self, key):
-        return self._data[key]
+        if not super(Config, self).__getattribute__('_first_reload_done'):
+            super(Config, self).__getattribute__('reload')()
+        try:
+            return self._data[key]
+        except KeyError:
+            raise MissingConfigurationAttributeException(key)
 
     def __getattribute__(self, name):
+        if not super(Config, self).__getattribute__('_first_reload_done'):
+            super(Config, self).__getattribute__('reload')()
         try:
             return object.__getattribute__(self, name)
         except AttributeError:

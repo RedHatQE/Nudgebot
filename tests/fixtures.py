@@ -32,7 +32,7 @@ def workspace():
     shutil.rmtree(WORKSPACE)
 
 
-@pytest.yield_fixture(scope='module')
+@pytest.yield_fixture(scope='session')
 def new_project(workspace):
     """
     Setup: Creating a new project.
@@ -44,7 +44,7 @@ def new_project(workspace):
     shutil.rmtree(PROJECT)
 
 
-@pytest.yield_fixture(scope='module')
+@pytest.yield_fixture(scope='session')
 def new_project_via_cmd(workspace):
     """Same as new_project but via command line"""
     out = sp.run(['python36', cli.__file__, 'createproject', PROJECT])
