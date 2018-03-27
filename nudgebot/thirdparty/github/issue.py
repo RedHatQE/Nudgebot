@@ -1,28 +1,28 @@
-"""Github pull request."""
-from github.PullRequest import PullRequest as PyGithubPullRequest
+"""Github issue."""
+from github.Issue import Issue as PyGithubIssue
 
 from nudgebot.thirdparty.github.base import PyGithubObjectWrapper, Github
 from nudgebot.thirdparty.github.repository import Repository
 from nudgebot.thirdparty.base import PartyScope
 
 
-class PullRequest(PyGithubObjectWrapper, PartyScope):
-    """Github pull request."""
+class Issue(PyGithubObjectWrapper, PartyScope):
+    """Github issue."""
 
     Party = Github()
-    PyGithubClass = PyGithubPullRequest
+    PyGithubClass = PyGithubIssue
     primary_keys = ['organization', 'repository', 'number']
 
     @classmethod
     def instantiate(cls, repository, number):  # noqa
         assert isinstance(repository, Repository)
         assert isinstance(number, int)
-        pygithub_object = repository.api.get_pull(number)
+        pygithub_object = repository.api.get_issue(number)
         return cls(pygithub_object)
 
     @classmethod
     def init_by_keys(cls, **kwargs):  # noqa
-        assert list(kwargs.keys()) == list(cls.primary_keys)
+        assert kwargs.keys() == cls.primary_keys
         repository = Repository.init_by_keys(
             organization=kwargs.get('organization'), name=kwargs.get('repository'))
         return cls.instantiate(repository, kwargs.get('number'))

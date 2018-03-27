@@ -1,0 +1,13 @@
+users:
+  -
+    github_login: gshefer
+    email: gshefer@redhat.com
+    irc_nick: gshefer
+  -
+    github_login: jhenner
+    email: jhenner@redhat.com
+    irc_nick: jhenner
+  -
+    github_login: shalomnaim1
+    email: snaim@redhat.com
+    irc_nick: snaim

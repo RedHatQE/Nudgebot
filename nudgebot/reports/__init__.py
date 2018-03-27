@@ -4,10 +4,11 @@ from celery.schedules import crontab
 from jinja2 import Template
 
 from nudgebot.utils import send_email
-from project_template.config import Config  # ContextProcessor
+from nudgebot.settings import CurrnetProject
+from nudgebot.base import SubclassesGetterMixin
 
 
-class Report(object):
+class Report(SubclassesGetterMixin):
     """A Base report object
     static attributes:
         * NAME `str`: the name of the report. If not defined - uses the class name as name.
@@ -36,7 +37,7 @@ class Report(object):
         assert self.RECEIVERS, 'No receivers for the report, please define RECEIVERS'
 
     def __repr__(self):
-        return '<{} name="{}", subject="{}", >'
+        return '<{} name="{}", subject="{}", >'.format(self.__class__.__name__, self.get_name(), self.subject)
 
     @classmethod
     def get_name(cls):
@@ -74,4 +75,5 @@ class Report(object):
             @keyword receivers: (`list` of `str`) list of the addresses of the report receivers,
                                 Uses the default self.RECEIVERS if not provided
         """
-        return send_email(Config(), receivers or self.RECEIVERS, self.subject, self.body, text_format=self.TEXT_FORMAT)
+        return send_email(CurrnetProject().config.credentials.email.address,
+                          receivers or self.RECEIVERS, self.subject, self.body, text_format=self.TEXT_FORMAT)

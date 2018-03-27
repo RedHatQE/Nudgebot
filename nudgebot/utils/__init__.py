@@ -55,3 +55,20 @@ def send_email(from_address, receivers, subject, body, attachments=None, text_fo
 
     smtp_server = smtplib.SMTP('localhost')  # TODO: parameterize
     smtp_server.sendmail(from_address, receivers, msg.as_string())
+
+
+def from_camel(string: str) -> str:
+    """Converting a CamelCase string to non_camel_case"""
+    assert isinstance(string, str), 'string must be a type of `str`'
+    out = ''
+    for i, c in enumerate(string):
+        addition = c.lower()
+        if c.isupper():
+            if i != 0:
+                addition = '_' + addition
+        out += addition
+    return out
+
+
+class CachedBuffer(object):
+    pass  # TODO: Implement

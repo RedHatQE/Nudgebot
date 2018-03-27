@@ -1,19 +1,25 @@
 from github.GithubException import UnknownObjectException
 from github.Repository import Repository as PyGithubRepository
 
-from nudgebot.thirdparty.github import PyGithubObjectWrapper, github_client
+from nudgebot.thirdparty.github.base import PyGithubObjectWrapper
+from nudgebot.thirdparty.base import PartyScope
 
 
-class Repository(PyGithubObjectWrapper):
+class Repository(PyGithubObjectWrapper, PartyScope):
     PyGithubClass = PyGithubRepository
+    primary_keys = ['organization', 'name']
 
     @classmethod
     def instantiate(cls, organization, name):
         try:
-            org = github_client.get_organization(organization)
+            org = cls.Party.client.get_organization(organization)
         except UnknownObjectException:
-            org = github_client.get_user(organization)
+            org = cls.Party.client.get_user(organization)
         return cls(org.get_repo(name))
+
+    @classmethod
+    def init_by_keys(cls, **kwargs):
+        return cls.instantiate(organization=kwargs.get('organization'), name=kwargs.get('name'))
 
     def get_all_events(self):
         """Getting both issue events and events sorted by creation datetime.

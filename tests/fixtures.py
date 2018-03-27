@@ -28,6 +28,7 @@ def workspace():
     if os.path.isdir(WORKSPACE):
         shutil.rmtree(WORKSPACE)
     os.mkdir(WORKSPACE)
+    os.chdir(WORKSPACE)
     yield WORKSPACE
     shutil.rmtree(WORKSPACE)
 
@@ -52,3 +53,36 @@ def new_project_via_cmd(workspace):
     _create_configs(PROJECT)
     yield imp.load_source('.', os.path.join(PROJECT, '__init__.py'))
     shutil.rmtree(PROJECT)
+
+
+@pytest.fixture(scope='session')
+def statistics_classes():
+    """New statistics classes"""
+    from nudgebot.statistics import statistic, PullRequestStatistics, RepositoryStatistics
+
+    class MyPrStatistics(PullRequestStatistics):
+        @statistic
+        def number_of_commits(self):
+            return self.party_scope.commits
+
+        @statistic
+        def title(self):
+            return self.party_scope.title
+
+        @statistic
+        def owner(self):
+            return self.party_scope.user.login
+
+    class MyRepositoryStatistics(RepositoryStatistics):
+        @statistic
+        def number_of_closed_pull_requests(self):
+            return len(list(self.party_scope.get_pulls(state='closed')))
+
+        @statistic
+        def number_of_open_pull_requests(self):
+            return len(list(self.party_scope.get_pulls(state='open')))
+
+    return {
+        MyPrStatistics.COLLECTION_NAME: MyPrStatistics,
+        MyRepositoryStatistics.COLLECTION_NAME: MyRepositoryStatistics
+    }

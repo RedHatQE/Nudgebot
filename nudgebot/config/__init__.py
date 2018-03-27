@@ -8,7 +8,7 @@ from nudgebot.exceptions import (MissingConfigurationFileException,
 
 class Config(object):
     """The Config object contains all the config data that found in the CONFIG_FILES as `dist`"""
-    CONFIG_FILES = ('config.yaml', 'credentials.yaml')
+    CONFIG_FILES = ('config.yaml', 'credentials.yaml', 'users.yaml')
 
     def __init__(self, dirpath):
         """

@@ -30,7 +30,7 @@ def test_wrapping(new_project, some_repo, some_pr):
 
 def test_wrapping_bad_objects(new_project, some_repo, some_pr):
     """Testing that the wrapper works correctly when passing primitive objects"""
-    from nudgebot.thirdparty.github import PyGithubObjectWrapper
+    from nudgebot.thirdparty.github.base import PyGithubObjectWrapper
     for obj in (1, '2', object()):
         assert PyGithubObjectWrapper.wrap(obj, raise_when_not_found=False) == obj
         with pytest.raises(NoWrapperForPyGithubObjectException):
@@ -38,6 +38,9 @@ def test_wrapping_bad_objects(new_project, some_repo, some_pr):
 
 
 def test_wrapping_multiple_wrapped_objects(new_project, some_repo):
+    """Testing that there is option to create wrapper that wraps multiple pygithub objects"""
     from nudgebot.thirdparty.github.event import Event
+    from nudgebot.thirdparty.github.user import User
     events = some_repo.get_all_events()
     assert all(isinstance(e, Event) for e in list(events))
+    assert all(isinstance(e.actor, User) for e in events[:10] if e.actor)

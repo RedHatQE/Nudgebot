@@ -1,3 +1,4 @@
+"""This module used as the command line interface for the manager."""
 import argparse
 
 from nudgebot import manager
@@ -10,6 +11,7 @@ createproject_parser.add_argument('path', help='The path of the project')
 
 
 def parse_command(namespace):
+    """Parse the command end executes accordingly."""
     if namespace.operation == 'createproject':
         manager.create_new_project(namespace.path)
 
