@@ -6,3 +6,5 @@ cached-property==1.4.0
 enum34==1.1.6
 Django==2.0.3
 pymongo==3.6.1
+requests==2.18.4
+wait-for==1.0.9

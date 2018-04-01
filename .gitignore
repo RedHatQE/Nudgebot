@@ -8,3 +8,5 @@ credentials.yaml
 nudgebot/tests/config/*
 .pytest_cache/*
 .settings
+workspace
+

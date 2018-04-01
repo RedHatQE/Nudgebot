@@ -70,5 +70,26 @@ def from_camel(string: str) -> str:
     return out
 
 
-class CachedBuffer(object):
-    pass  # TODO: Implement
+def underscored(string):
+    """Convert string from 'string with whitespaces' to 'string_with_whitespaces'"""
+    assert isinstance(string, str)
+    return string.replace(' ', '_')
+
+
+def collect_subclasses(mod, cls, exclude=None):
+    """Collecting all subclasses of `cls` in the module `mod`
+
+    @param mod: `ModuleType` The module to collect from.
+    @param cls: `type` or (`list` of `type`) The parent class(es).
+    @keyword exclude: (`list` of `type`) Classes to not include.
+    """
+    out = []
+    for name in dir(mod):
+        attr = getattr(mod, name)
+        if (
+                isinstance(attr, type) and
+                (attr not in cls if isinstance(cls, (list, tuple)) else attr != cls) and
+                issubclass(attr, cls) and
+                (attr not in exclude if exclude else True)):
+            out.append(attr)
+    return out

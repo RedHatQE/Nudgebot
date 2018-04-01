@@ -3,13 +3,15 @@ Thirdparty module includes the interfaces for the third party.
 
 Each implemented third party module should implement these classes.
 """
-from abc import ABCMeta, abstractclassmethod, abstractproperty, abstractmethod
+import time
 
 from cached_property import cached_property
 
 from nudgebot.base import SubclassesGetterMixin, ABCMetaSingleton
-from nudgebot.settings import CurrnetProject
+from nudgebot.settings import CurrentProject
 from nudgebot.db.db import CachedStack
+from nudgebot.log import Loggable
+from threading import Thread
 
 
 class Party(SubclassesGetterMixin, metaclass=ABCMetaSingleton):
@@ -27,10 +29,10 @@ class Party(SubclassesGetterMixin, metaclass=ABCMetaSingleton):
         """Verify static attributes."""
         assert cls.key is not None, 'static attribute `key` must be defined'
         assert isinstance(cls.key, str), 'static attribute `key` must be a `str`'
-        assert cls.key in CurrnetProject().config.config, 'key "{}" not found in the config yaml'.format(cls.key)
-        assert cls.key in CurrnetProject().config.credentials, 'key "{}" not found in the credentials yaml'.format(cls.key)
+        assert cls.key in CurrentProject().config.config, 'key "{}" not found in the config yaml'.format(cls.key)
+        assert cls.key in CurrentProject().config.credentials, 'key "{}" not found in the credentials yaml'.format(cls.key)
 
-    @abstractproperty
+    @property
     def client(self):
         """Return the api client.
 
@@ -41,12 +43,12 @@ class Party(SubclassesGetterMixin, metaclass=ABCMetaSingleton):
     @cached_property
     def config(self):
         """Return the config data."""
-        return CurrnetProject().config.config[self.key]
+        return CurrentProject().config.config[self.key]
 
     @cached_property
     def credentials(self):
         """Return the credentials data."""
-        return CurrnetProject().config.credentials[self.key]
+        return CurrentProject().config.credentials[self.key]
 
 
 class APIclass(object):
@@ -59,7 +61,7 @@ class APIclass(object):
     pass
 
 
-class PartyScope(APIclass, metaclass=ABCMeta):
+class PartyScope(SubclassesGetterMixin, APIclass):
     """
     Party scope is used to separate the Party into scopes.
 
@@ -82,20 +84,19 @@ class PartyScope(APIclass, metaclass=ABCMeta):
                             elements actually distinguish among all the pull requests in Github and provide the ability to
                             instantiate a pull request independently without instantiating repository and then pass it to
                             the instantiate method.
+        * Parent: The parent party scope, for example: repository is the parent of pull request.
     """
 
     Party = None
-    primary_keys = None
+    primary_keys = []
+    Parent = None
 
-    def __init_subclass__(cls):  # @NoSelf
-        """Verify static attributes."""
-        assert cls.Party is not None, 'static attribute `Party` should be defined in {}'.format(cls)
-        assert isinstance(cls.Party, Party), 'static attribute `Party` should be a `Party` instance, not `{}`'.format(
-            getattr(cls.Party, '__class__', type(cls.Party)))
-        cls.primary_keys = cls.primary_keys or []
-        assert all(isinstance(key, str) for key in cls.primary_keys)
+    @classmethod
+    def all(cls):  # @NoSelf
+        """Return a generator of all the instances of the party scope"""
+        raise NotImplementedError()
 
-    @abstractclassmethod
+    @classmethod
     def init_by_keys(cls, **kwargs):  # @NoSelf
         """Instantiate the scope by keys.
 
@@ -104,6 +105,38 @@ class PartyScope(APIclass, metaclass=ABCMeta):
                 PullRequest(organization='octocat', repository='Hello-World', number=1)
         """
         raise NotImplementedError()
+
+    @cached_property
+    def query(self) -> dict:
+        """Return the query according to the primary keys"""
+        raise NotImplementedError()
+
+    @cached_property
+    def parent(self):
+        raise NotImplementedError()
+
+    @classmethod
+    def get_all_parent_classes(cls):
+        """Return all the parents of the scope"""
+        parents = []
+        parent = cls.Parent
+        while True:
+            parents.append(parent)
+            if not hasattr(parent, 'Parent') or not parent.Parent:
+                break
+            parent = parent.Parent
+        return parents
+
+    @cached_property
+    def hierarchy(self):
+        hierarchy = [self]
+        while issubclass(hierarchy[-1].__class__, self.__class__) and hierarchy[-1].parent:
+            hierarchy.append(hierarchy[-1].parent)
+        return hierarchy
+
+    @classmethod
+    def get_hierarchy_classes(cls):
+        return [cls] + cls.get_all_parent_classes()
 
     @classmethod
     def init_by_event(cls, event):
@@ -123,24 +156,35 @@ class PartyScope(APIclass, metaclass=ABCMeta):
         return not cls.primary_keys
 
 
-class Event(SubclassesGetterMixin, metaclass=ABCMeta):
+class Event(SubclassesGetterMixin):
     """
     An Event class represents an event that happens in the party.
 
     each event has party scopes which are being instantiated using its data. For example:
-        RepositoryEvent creates an instance of Repository which is later used to collect statistics.
+        RepositoryEvent creates a instance Repository instance which later used to collect statistics.
     Should be defined in subclass:
+        * Party: `Party`
         * PartyScopes: The scopes of the event. for more info - read the PartyScope docstring.
     """
 
+    Perty = None
     PartyScopes = []
 
-    @abstractproperty
+    def __init_subclass__(self):
+        assert all(issubclass(ps, PartyScope) for ps in self.PartyScopes), \
+            'All party scopes should be subclasses of {}'.format(PartyScope.__name__)
+        assert all(ps.Party == self.PartyScopes[0].Party for ps in self.PartyScopes), \
+            'All party scopes should have the same party'
+
+    def __repr__(self):
+        return '<{} id={}, hash={}>'.format(self.__class__.__name__, self.id, self.hash)
+
+    @property
     def id(self):
         """Return the unique id of the event."""
         raise NotImplementedError()
 
-    @abstractproperty
+    @property
     def data(self) -> dict:
         """Return the data of the event. this data will use to instantiate the PartyScope's.
 
@@ -151,66 +195,81 @@ class Event(SubclassesGetterMixin, metaclass=ABCMeta):
     @property
     def party(self):
         """Return the Party of the event."""
-        return self.PartyScope.Party
+        return self.Party
+
+    @classmethod
+    def hash_by_id(cls, event_id):
+        """Return the hash for the event using ID only"""
+        return '{}::{}'.format(cls.Party.key, event_id)
 
     @property
     def hash(self):
         """Return the unique hash for of the event."""
-        return '{}::{}::{}'.format(self.part.key, self.PartyScope.__name__, self.id)
+        return self.hash_by_id(self.id)
 
 
-class EventsFactory(metaclass=ABCMetaSingleton):
+class EventsFactory(Loggable, Thread, metaclass=ABCMetaSingleton):
     """
     An events factory is used to listen to the party, detect, and classify new events in the third party.
 
-    When the parent object calls to get_new_events(), new data (AKA grab_new_data) is grabbed from the third party
-    and then it builds the events (AKA build events) from this raw data.
-    _dilivered_events_stack is used to store the hash's of the events that has already been delivered, once new events
-    have been detected, it push them to the stack (AKA _push_to_delivered_events_stack) and returns them to
-    the parent object.
+    The events factory is running in a separated thread and collect new events and store them in the events buffer.
+    Every X seconds interval (`_check_for_new_events_interval`) it calls to `build_events` which responsible to get
+    new data, classify the events and store them in the events buffer.
+    Each time the parent is calling to `pull_event`, it's popping the first event in the buffer and return it.
+
     Should be defined in subclass:
         * Party: `Party` The events factory's party.
     """
 
     Party: Party = None
     _dilivered_events_stack = CachedStack('delivered_events',
-                                          length=CurrnetProject().config.config.events.delivered_stack_length)
+                                          length=CurrentProject().config.config.events.delivered_stack_length)
+    _check_for_new_events_interval = CurrentProject().config.config.events.check_interval
+    _events_buffer = []
 
-    @abstractmethod
-    def grab_new_data(self):
-        """Grab new raw data from the third party client.
+    def __init__(self):
+        Loggable.__init__(self)
+        Thread.__init__(self, name=self.__class__.__name__, daemon=True)
+        self._buffer_buisy_mutex = False
 
-        This function should return a new data as raw (primitive types like `dict`, `list`, etc), then build_events
-        will use this to build the events.
-        """
+    def build_events(self) -> list:
+        """Build new_events"""
         raise NotImplementedError()
 
-    @abstractmethod
-    def build_events(self, data) -> list:
-        """Build the events from the received raw data.
-
-        @param data: The data as raw.
-        """
-        raise NotImplementedError()
-
-    def _push_to_delivered_events_stack(self, event: Event):
-        """Push the event to the delivered events stack.
-
-        @param event: `Event` The event to push
-        """
-        assert isinstance(event, Event), 'Cannot push non-event object to the delivered events buffer.'
-        if len(self._delivered_events_buffer) == self.BufferLength:
-            self._dilivered_events_stack.pop(0)
-            self._dilivered_events_stack.append(event.hash)
-
-    @property
-    def delivered_events(self):
-        """Return the delivered events."""
-        return self._dilivered_events_stack
-
-    def get_new_events(self) -> list:
-        """Return new events."""
-        events = self.build_events(self.grab_new_data())
+    def collect_new_events(self) -> list:
+        """Collecting new events and push them into the events buffer"""
+        self.logger.info('Collecting new events...')
+        events = self.build_events()
+        if not events:
+            self.logger.info('No new events.')
         for event in events:
-            self._push_to_delivered_events_stack(event)
-        return events
+            self.logger.info('New event detected: {}'.format(event))
+            while self._buffer_buisy_mutex:
+                pass  # TODO: Better
+            self._buffer_buisy_mutex = True
+            self._events_buffer.append(event)
+            self._buffer_buisy_mutex = False
+
+    def pull_event(self):
+        """Return the first event in the events buffer. if the events buffer is empty, return None."""
+        while self._buffer_buisy_mutex:
+            pass  # TODO: Better
+        self._buffer_buisy_mutex = True
+        event = None
+        if self._events_buffer:
+            event = self._events_buffer.pop(0)
+            self._dilivered_events_stack.push(event.hash)
+        self._buffer_buisy_mutex = False
+        if event:
+            self.logger.info('Pulling new event: {}'.format(event))
+        return event
+
+    def run(self):
+        """Overwrite of Thread.run. Collect and store events in infinite loop with interval `_check_for_new_events_interval`"""
+        while True:
+            last_check = time.time()
+            self.collect_new_events()
+            while time.time() - last_check < self._check_for_new_events_interval:
+                self.logger.debug('Waiting for new events collection: new collection in {}s'.format(
+                    self._check_for_new_events_interval - (time.time() - last_check)))
+                time.sleep(3)

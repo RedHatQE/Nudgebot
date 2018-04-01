@@ -4,7 +4,7 @@ from celery.schedules import crontab
 from jinja2 import Template
 
 from nudgebot.utils import send_email
-from nudgebot.settings import CurrnetProject
+from nudgebot.settings import CurrentProject
 from nudgebot.base import SubclassesGetterMixin
 
 
@@ -75,5 +75,5 @@ class Report(SubclassesGetterMixin):
             @keyword receivers: (`list` of `str`) list of the addresses of the report receivers,
                                 Uses the default self.RECEIVERS if not provided
         """
-        return send_email(CurrnetProject().config.credentials.email.address,
+        return send_email(CurrentProject().config.credentials.email.address,
                           receivers or self.RECEIVERS, self.subject, self.body, text_format=self.TEXT_FORMAT)

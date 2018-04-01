@@ -1,6 +1,0 @@
-users:
-  -
-    github_login: <github_login>
-    email: <email>
-    irc_nick: <irc_nick>
-  - ...

@@ -72,7 +72,3 @@ class SubclassesGetterMixin(object):
                 if cls in getattr(attr, '__mro__', []):
                     subclasses.append(attr)
         return subclasses
-
-
-class Trigger(metaclass=ABCMeta):
-    pass  # TODO: Implement

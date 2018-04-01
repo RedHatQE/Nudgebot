@@ -2,7 +2,7 @@
 from nudgebot.base import Singleton
 
 
-class CurrnetProject(metaclass=Singleton):
+class CurrentProject(metaclass=Singleton):
     """A proxy object for the current project."""
 
     def __init__(self):

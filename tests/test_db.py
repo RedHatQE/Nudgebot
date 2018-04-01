@@ -17,5 +17,6 @@ def test_cached_stack(new_project):
             stack.push(i)
     assert stacks[0].stack == [14, 15, 16]
     assert stacks[0].stack[1] == 15  # Testing __getitem__
+    assert 15 in stacks[0]  # Testing __contains__
     assert stacks[1].stack == [12, 13, 14, 15, 16]
     assert stacks[2].stack == [9, 10, 11, 12, 13, 14, 15, 16]

@@ -8,7 +8,7 @@ from github.GithubObject import GithubObject
 
 from nudgebot.base import SubclassesGetterMixin
 from nudgebot.exceptions import NoWrapperForPyGithubObjectException
-from nudgebot.thirdparty.base import Party
+from nudgebot.thirdparty.base import Party, PartyScope
 
 
 class Github(Party):
@@ -21,7 +21,7 @@ class Github(Party):
         """Return the repositories object according to the github configuration in the config file."""
         from nudgebot.thirdparty.github.repository import Repository
         repositories = []
-        for repodata in self.config.github.repositories:
+        for repodata in self.config.repositories:
             repositories.append(Repository.instantiate(repodata['organization'], repodata['name']))
         return repositories
 
@@ -29,6 +29,11 @@ class Github(Party):
     def client(self):  # noqa
         return GithubClient(self.credentials.get('username'), self.credentials.get('password'),
                             client_id=self.credentials.client_id, client_secret=self.credentials.client_secret)
+
+
+class GithubScope(PartyScope):
+    """A Github party scope"""
+    pass
 
 
 class PyGithubObjectWrapper(SubclassesGetterMixin):
@@ -64,7 +69,7 @@ class PyGithubObjectWrapper(SubclassesGetterMixin):
         self._pygithub_object = pygithub_object
 
     def __repr__(self):
-        return '[{}({}) | {}]'.format(
+        return '<{}({}) | {}>'.format(
             self.__class__.__name__, PyGithubObjectWrapper.__name__, self._pygithub_object.__repr__())
 
     @classmethod

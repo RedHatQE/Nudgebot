@@ -3,14 +3,14 @@ import pprint
 from pymongo import MongoClient
 
 from bson import _ENCODERS as bson_encoders
-from nudgebot.settings import CurrnetProject
+from nudgebot.settings import CurrentProject
 
 
 class DatabaseClient(MongoClient):  # noqa
     """A Database client for MongoDB"""
     bson_types = tuple(bson_encoders.keys())
-    HOST = CurrnetProject().config.config.database.mongo_client.host
-    PORT = CurrnetProject().config.config.database.mongo_client.port
+    HOST = CurrentProject().config.config.database.mongo_client.host
+    PORT = CurrentProject().config.config.database.mongo_client.port
 
     def __init__(
             self,
@@ -103,7 +103,7 @@ class DataCollection(object):
         """Returns the database collection"""
         assert self.DATABASE_NAME is not None
         assert self.COLLECTION_NAME is not None
-        db = getattr(CurrnetProject().db_client, self.DATABASE_NAME)
+        db = getattr(CurrentProject().db_client, self.DATABASE_NAME)
         return getattr(db, self.COLLECTION_NAME)
 
 
@@ -117,21 +117,28 @@ class CachedStack(DataCollection):
     def __init__(self, name: str, length: int = 1000):
         """
         @param name: `str` The name of the cached stack.
-        @keyword  length: `int` the length of the cached stack.
+        @keyword  length: `int` the length of the cached stack. if length = -1: length is unlimited.
         """
+        self._i = 0
         self._name = name
         self._length = length
         self._length_exeeded = False
         self.stack or self.db_collection.insert_one({'name': self._name, 'stack': []})
 
     def __repr__(self):
-        return '<{} {}>'.format(self.__class__.__name__, self.get())
+        return '<{} {}>'.format(self.__class__.__name__, self.stack)
 
     def __eq__(self, other):
         return self.stack == getattr(other, 'stack', None)
 
     def __getitem__(self, index):
         return self.stack[index]
+
+    def __contains__(self, item):
+        return item in self.stack
+
+    def __len__(self):
+        return len(self.stack)
 
     @property
     def stack(self):
@@ -147,7 +154,7 @@ class CachedStack(DataCollection):
         Checking whether the length exceeded. once it exceeded, it continue to be exceeded.
         That in order to reduce DB calls."""
         if not self._length_exeeded:
-            self._length_exeeded = self._length <= len(self.stack)
+            self._length_exeeded = (False if self._length == -1 else self._length <= len(self.stack))
         return self._length_exeeded
 
     def pop(self):
