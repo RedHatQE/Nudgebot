@@ -65,7 +65,7 @@ class Report(SubclassesGetterMixin):
         """Rendering the body of the report with the data"""
         if os.path.exists(self.TEMPLATE):
             with open(self.TEMPLATE, 'r') as f:
-                template_raw = f.read().encode('UTF-8')
+                template_raw = f.raw_read().encode('UTF-8')
         else:
             template_raw = self.TEMPLATE
         return Template(template_raw).render(data=self.data)

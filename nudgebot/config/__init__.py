@@ -7,8 +7,16 @@ from nudgebot.exceptions import (MissingConfigurationFileException,
 
 
 class Config(object):
-    """The Config object contains all the config data that found in the CONFIG_FILES as `dist`"""
-    CONFIG_FILES = ('config.yaml', 'credentials.yaml', 'users.yaml')
+    """The Config object contains all the config data that found in the configfiles() as `dict`"""
+    CONFIG_NAMES = ('config', 'credentials', 'users')
+
+    @classmethod
+    def configfiles(cls):
+        return [f'{f}.yaml' for f in cls.CONFIG_NAMES]
+
+    @classmethod
+    def configtemplates(cls):
+        return [f'{f}.template.yaml' for f in cls.CONFIG_NAMES]
 
     def __init__(self, dirpath):
         """
@@ -20,7 +28,7 @@ class Config(object):
 
     def reload(self):
         self._first_reload_done = True
-        for p in self.CONFIG_FILES:
+        for p in self.configfiles():
             conf_name = os.path.splitext(p)[0]
             fp = os.path.join(self.dirpath, p)
             if not os.path.exists(fp):

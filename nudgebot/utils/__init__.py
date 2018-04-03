@@ -1,11 +1,12 @@
 import os
 import smtplib
+import logging
+from threading import Timer
 from email import encoders
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
 from email.utils import COMMASPACE, formatdate
-import logging
 
 
 def send_email(from_address, receivers, subject, body, attachments=None, text_format='plain', logger=None):
@@ -47,7 +48,7 @@ def send_email(from_address, receivers, subject, body, attachments=None, text_fo
         for attachment in attachments:
             with open(attachment, "rb") as attachment_file:
                 part = MIMEBase('application', 'octet-stream')
-                part.set_payload(attachment_file.read())
+                part.set_payload(attachment_file.raw_read())
                 encoders.encode_base64(part)
                 part.add_header('Content-Disposition', "attachment; filename= {}"
                                 .format(attachment))
@@ -93,3 +94,37 @@ def collect_subclasses(mod, cls, exclude=None):
                 (attr not in exclude if exclude else True)):
             out.append(attr)
     return out
+
+
+class RunEvery(object):
+    """
+    A thread that runs a callback every interval seconds.
+    """
+    def __init__(self, interval, callback, args=None, kwargs=None):
+        """
+        @param inteval: `int` Number of seconds among executions.
+        @param callback: A callable callback to call every interval seconds.
+        @keyword args: `tuple` The arguments of the callback function.
+        @keyword kwargs: `dict` The keyword arguments of the callback function.
+        """
+        self.interval = interval
+        self.callback = callback
+        self.args = args
+        self.kwargs = kwargs
+        self.thread = Timer(self.interval, self.handle_callback, self.args, self.kwargs)
+
+    def handle_callback(self, *args, **kwargs):
+        self.callback(*args, **kwargs)
+        self.thread = Timer(self.interval, self.handle_callback, args, kwargs)
+        self.thread.start()
+
+    def start(self, run_first=False):
+        """
+        @param run_first: `bool` Whether to first run the callback and then start the timer.
+        """
+        if run_first:
+            self.callback(*(self.args or tuple()), **(self.kwargs or {}))
+        self.thread.start()
+
+    def cancel(self):
+        self.thread.cancel()

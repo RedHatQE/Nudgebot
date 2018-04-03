@@ -8,4 +8,7 @@ class Loggable(object):
     def __init__(self):
         logging.basicConfig()
         self.logger = logging.getLogger(self.__class__.__name__)
-        self.logger.setLevel(getattr(logging, CurrentProject().config.config.logging_level.upper()))
+        self.logger.setLevel(
+            getattr(logging, CurrentProject().config.config.logging_level.upper()) if CurrentProject()
+            else logging.INFO
+        )

@@ -11,7 +11,7 @@ from nudgebot.statistics.base import StatisticsCollection
 from nudgebot.settings import CurrentProject
 
 
-class _TaskBase(Loggable, DataCollection, SubclassesGetterMixin):
+class TaskBase(Loggable, DataCollection, SubclassesGetterMixin):
     """A base class for a task"""
     Party = None
     NAME = None
@@ -35,7 +35,7 @@ class _TaskBase(Loggable, DataCollection, SubclassesGetterMixin):
         raise NotImplementedError()
 
 
-class ConditionalTask(_TaskBase):
+class ConditionalTask(TaskBase):
     """
     A conditional task.
 
@@ -208,7 +208,7 @@ class ConditionalTask(_TaskBase):
         self.db_collection.update_one(self.query, {'$set': db_data})
 
 
-class PeriodicTask(_TaskBase):
+class PeriodicTask(TaskBase):
     """
     A periodic task.
 
@@ -220,14 +220,13 @@ class PeriodicTask(_TaskBase):
 
     Should be defined in subclass:
         * Name: `str` The name of the task.
-        * Party: `Party` The Party of the task.
         * CRONTAB: `celery.schedule.crontab` The crontab of the periodic task.
     """
     CRONTAB = None
 
-    def run(self, all_statistics):
+    def run(self):
         raise NotImplementedError()
 
     def handle(self):
         self.logger.info(f'Running periodic task: {self.NAME}')
-        self.run(self.all_statistics)
+        self.run()

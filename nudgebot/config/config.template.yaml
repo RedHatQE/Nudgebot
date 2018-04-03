@@ -1,0 +1,30 @@
+github:
+  repositories:
+    -
+      organization: <organization>
+      name: <repository_name>
+      reviewers:
+        - # Level 1
+          - <github_login>
+          - <github_login>
+          - ...
+        - # Level 2
+          - ...
+        - ...
+      maintainers:
+        - <github_login>
+        - ...
+irc:
+  channels:
+    - <channel>
+    - <channel>
+    - ...
+    
+events:
+  check_interval: 60  # Checks for new event interval in seconds (i.e. - check every X seconds)
+  delivered_stack_length: 100000  # Keep X events back in the delivered events stack
+logging_level: INFO  # Available levels are described here: https://docs.python.org/3/library/logging.html#levels
+database:
+  mongo_client:
+    host: <host>
+    port: <port>

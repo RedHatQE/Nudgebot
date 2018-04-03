@@ -8,6 +8,9 @@ class CurrentProject(metaclass=Singleton):
     def __init__(self):
         self._project_package = None
 
+    def __bool__(self):
+        return bool(self._project_package)
+
     def setup(self, current_project_package):
         """Setups the current project.
 

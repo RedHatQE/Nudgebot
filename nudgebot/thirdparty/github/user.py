@@ -9,4 +9,4 @@ class User(PyGithubObjectWrapper, APIclass):
 
     @classmethod
     def instantiate(cls, login):
-        return cls(cls.Client.get_user(login))
+        return cls(cls.Party.client.get_user(login))

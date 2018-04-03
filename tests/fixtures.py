@@ -15,7 +15,7 @@ def _create_configs(project_path):
     """Replacing the config templates with the config files in the test directory.
         @param project_path: `str` The path of the project
     """
-    for cf in Config.CONFIG_FILES:
+    for cf in Config.configfiles():
         shutil.copy(os.path.join(TEST_DIR, 'config', cf), os.path.join(project_path, 'config', cf))
 
 

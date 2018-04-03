@@ -4,6 +4,7 @@ from github.PullRequest import PullRequest as PyGithubPullRequest
 
 from nudgebot.thirdparty.github.base import PyGithubObjectWrapper, Github, GithubScope
 from nudgebot.thirdparty.github.repository import Repository
+from nudgebot.thirdparty.github.user import User
 
 
 class PullRequest(PyGithubObjectWrapper, GithubScope):
@@ -28,13 +29,6 @@ class PullRequest(PyGithubObjectWrapper, GithubScope):
         return self.repository
 
     @classmethod
-    def all(cls):
-        for repo in cls.Parent.all():
-            for pr in repo.get_pulls():
-                pr.repository = repo
-                yield pr
-
-    @classmethod
     def init_by_keys(cls, **kwargs):  # noqa
         assert list(kwargs.keys()) == list(cls.primary_keys)
         repository = Repository.init_by_keys(
@@ -48,3 +42,18 @@ class PullRequest(PyGithubObjectWrapper, GithubScope):
             'repository': self.repository.name,
             'number': self.number
         }
+
+    def add_reviewers(self, reviewers):
+        """Adding the reviewers to the pull request - this is workaround until
+        https://github.com/PyGithub/PyGithub/pull/598 is merged.
+        :calls: `POST /repos/:owner/:repo/pulls/:number/requested_reviewers
+                <https://developer.github.com/v3/pulls/review_requests/>`_
+        :param reviewers: (logins) list of strings or User
+        """
+        status, _, _ = self._pygithub_object._requester.requestJson(
+            "POST",
+            self.url + "/requested_reviewers",
+            input={'reviewers': [reviewer.login if isinstance(reviewer, User) else reviewer for reviewer in reviewers]},
+            headers={'Accept': 'application/vnd.github.thor-preview+json'}
+        )
+        return status == 201

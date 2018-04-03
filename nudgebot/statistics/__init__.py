@@ -5,4 +5,4 @@ from .base import Statistics
 from . import github
 
 
-collect_statistics_classes = partial(collect_subclasses, exclude=collect_subclasses(github, Statistics))
+collect_statistics_classes = partial(collect_subclasses, cls=Statistics, exclude=collect_subclasses(github, Statistics))

@@ -28,11 +28,6 @@ class Repository(PyGithubObjectWrapper, GithubScope):
         return
 
     @classmethod
-    def all(cls):
-        for repo in cls.Party.repositories:
-            yield repo
-
-    @classmethod
     def init_by_keys(cls, **kwargs):
         return cls.instantiate(organization=kwargs.get('organization'), name=kwargs.get('name'))
 

@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <style>
+        table {
+            font-family: arial, sans-serif;
+            border-collapse: collapse;
+            width: 100%;
+        }
+
+        td, th {
+            border: 1px solid #dddddd;
+            text-align: left;
+            padding: 8px;
+        }
+
+        tr:nth-child(even) {
+            background-color: #dddddd;
+        }
+        p {
+            margin: 1px;
+        }
+        </style>
+    </head>
+    <body>
+        <div>
+        {% for repo_name, repo_data in data.items() %}
+            <h2>{{ repo_name }}:</h2>
+                <table>
+                  <tr>
+                    <th>Pull request</th>
+                    <th>#Commits</th>
+                    <th>#Comments</th>
+                    <th>Reviewers</th>
+                  </tr>
+                  {% for pr_number, pr_data in repo_data.items() -%}
+                  <tr>
+                    <td><a href="https://github.com/{{ pr_data['organization'] }}/{{ pr_data['repository'] }}/pull/{{ pr_data['number'] }}">#{{ pr_data['number'] }}</a></td>
+                    <td>{{ pr_data['commits'] }}</td>
+                    <td>{{ pr_data['comments'] }}</td>
+                    <td>{{ ', '.join(pr_data['reviewers']) }}</td>
+                  </tr>
+                  {% endfor -%}
+                </table>
+        {% endfor -%}
+        </div>
+    </body>
+</html>

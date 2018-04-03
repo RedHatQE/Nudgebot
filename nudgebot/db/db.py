@@ -92,11 +92,11 @@ class DataCollection(object):
     DATABASE_NAME = None
     COLLECTION_NAME = None
 
-    def upsert(self, query: dict, update: dict):
+    def upsert(self, query: dict, work: dict):
         """Update a document with the matched query, if no such document, insert.
-            @see: https://docs.mongodb.com/manual/reference/method/db.collection.update/#upsert-option
+            @see: https://docs.mongodb.com/manual/reference/method/db.collection.work/#upsert-option
         """
-        return self.db_collection.update(query, update, {'upsert': True})
+        return self.db_collection.update(query, work, {'upsert': True})
 
     @property
     def db_collection(self):

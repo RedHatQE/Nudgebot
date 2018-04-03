@@ -5,8 +5,8 @@
 *.pydevproject
 config.yaml
 credentials.yaml
+users.yaml
 nudgebot/tests/config/*
 .pytest_cache/*
 .settings
-workspace
 

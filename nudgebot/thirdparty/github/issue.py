@@ -28,15 +28,6 @@ class Issue(PyGithubObjectWrapper, GithubScope):
         return self.repository
 
     @classmethod
-    def all(cls):
-        for repo in cls.Parent.all():
-            for issue in repo.get_issues():
-                if issue.pull_request:
-                    continue
-                issue.repository = repo
-                yield issue
-
-    @classmethod
     def init_by_keys(cls, **kwargs):  # noqa
         assert list(kwargs.keys()) == cls.primary_keys
         repository = Repository.init_by_keys(

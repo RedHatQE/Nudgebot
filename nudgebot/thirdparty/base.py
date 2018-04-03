@@ -4,17 +4,17 @@ Thirdparty module includes the interfaces for the third party.
 Each implemented third party module should implement these classes.
 """
 import time
+from threading import Thread, RLock
 
 from cached_property import cached_property
 
-from nudgebot.base import SubclassesGetterMixin, ABCMetaSingleton
+from nudgebot.base import SubclassesGetterMixin, Singleton
 from nudgebot.settings import CurrentProject
 from nudgebot.db.db import CachedStack
 from nudgebot.log import Loggable
-from threading import Thread
 
 
-class Party(SubclassesGetterMixin, metaclass=ABCMetaSingleton):
+class Party(SubclassesGetterMixin, metaclass=Singleton):
     """
     The Party class represents the actual third party interface.
 
@@ -208,7 +208,7 @@ class Event(SubclassesGetterMixin):
         return self.hash_by_id(self.id)
 
 
-class EventsFactory(Loggable, Thread, metaclass=ABCMetaSingleton):
+class EventsFactory(Loggable, Thread, metaclass=Singleton):
     """
     An events factory is used to listen to the party, detect, and classify new events in the third party.
 
@@ -230,7 +230,7 @@ class EventsFactory(Loggable, Thread, metaclass=ABCMetaSingleton):
     def __init__(self):
         Loggable.__init__(self)
         Thread.__init__(self, name=self.__class__.__name__, daemon=True)
-        self._buffer_buisy_mutex = False
+        self._buffer_buisy_mutex = RLock()
 
     def build_events(self) -> list:
         """Build new_events"""
@@ -244,22 +244,18 @@ class EventsFactory(Loggable, Thread, metaclass=ABCMetaSingleton):
             self.logger.info('No new events.')
         for event in events:
             self.logger.info('New event detected: {}'.format(event))
-            while self._buffer_buisy_mutex:
-                pass  # TODO: Better
-            self._buffer_buisy_mutex = True
+            self._buffer_buisy_mutex.acquire()
             self._events_buffer.append(event)
-            self._buffer_buisy_mutex = False
+            self._buffer_buisy_mutex.release()
 
     def pull_event(self):
         """Return the first event in the events buffer. if the events buffer is empty, return None."""
-        while self._buffer_buisy_mutex:
-            pass  # TODO: Better
-        self._buffer_buisy_mutex = True
+        self._buffer_buisy_mutex.acquire()
         event = None
         if self._events_buffer:
             event = self._events_buffer.pop(0)
             self._dilivered_events_stack.push(event.hash)
-        self._buffer_buisy_mutex = False
+        self._buffer_buisy_mutex.release()
         if event:
             self.logger.info('Pulling new event: {}'.format(event))
         return event
@@ -272,4 +268,10 @@ class EventsFactory(Loggable, Thread, metaclass=ABCMetaSingleton):
             while time.time() - last_check < self._check_for_new_events_interval:
                 self.logger.debug('Waiting for new events collection: new collection in {}s'.format(
                     self._check_for_new_events_interval - (time.time() - last_check)))
-                time.sleep(3)
+                time.sleep(1)
+
+
+class ScopesCollector(object, metaclass=Singleton):
+
+    def collect_all(self):
+        raise NotImplementedError()

@@ -1,5 +1,5 @@
 [flake8]
 max-line-length = 130
-exclude = .env, workspace
+exclude = .env, assets.py
 ignore = E265, D107, D105, D200
 
