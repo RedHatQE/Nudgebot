@@ -24,7 +24,7 @@ class required_connection(object):
 
     def __call__(self, *args, **kwargs):
         if not self._obj.is_connected():
-            raise Exception()  # TODO: Exception
+            raise Exception('You must connect first before running this function')
         return self._method(self._obj, *args, **kwargs)
 
 
@@ -44,10 +44,12 @@ class IRCclient(Loggable):
     READ_TIMEOUT = 1  # seconds
     PONG_SERVER_TIMER = 60  # seconds
     _line_splitter = r'\r\n'
+    _max_msg_length = 256  # The max message length in characters
 
     def __init__(self, server: str, nick: str, port=6667):
         assert isinstance(server, str), f'server must be an `str`, got {server}'
         assert isinstance(nick, str), f'nick must be an `str`, got {nick}'
+        Loggable.__init__(self)
         self._ircsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._ircsock.settimeout(self.READ_TIMEOUT)
         self._server = server
@@ -56,8 +58,28 @@ class IRCclient(Loggable):
         self._io_mutex = RLock()
         self._pong_server_timer = RunEvery(self.PONG_SERVER_TIMER, self.pong_server)
         self._channels = []
-        Loggable.__init__(self)
-        self.logger.setLevel(logging.DEBUG)
+
+    def _split_data(self, msg: str):
+        """
+        This is in order to prevent flood.
+
+        @param data: `str` The data.
+        @see: https://www.quakenet.org/help/general/what-do-those-quit-messages-mean
+        """
+        assert isinstance(msg, str)
+        lines = [ln for ln in msg.split('\n')]
+        chunks = []
+        for line in lines:
+            if len(line) > self._max_msg_length:
+                for word in line.split(' '):
+                    chunk = word
+                    while chunk < self._max_msg_length:
+                        chunk += ' ' + word
+                        line = line[len(word):]
+                    chunks.append(chunk)
+            else:
+                chunks.append(line)
+        return chunks
 
     @property
     def server(self):
@@ -139,7 +161,9 @@ class IRCclient(Loggable):
         self.send('PONG', f':{to}')
 
     def msg(self, channel: str, msg: str):
-        self.send('PRIVMSG', f'{channel} :{msg}')
+        for chunk in self._split_data(msg):
+            for line in chunk.split('\n'):
+                self.send('PRIVMSG', f'{channel} :{line}')
 
     def join(self, channel: str):
         self.logger.info(f'Joining channel: {channel}')

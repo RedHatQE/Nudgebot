@@ -9,7 +9,7 @@ from cached_property import cached_property
 class Message(PartyScope):
     Party = IRCparty()
     primary_keys = ['server', 'channel', 'sender', 'content', 'datetime']
-    Parent = Channel
+    Parents = [Channel]
 
     def __init__(self, channel: Channel, sender: str, content: str, datetime_obj: datetime):
         assert isinstance(channel, Channel)
@@ -42,9 +42,8 @@ class Message(PartyScope):
         return self._channel.server
 
     @classmethod
-    def init_by_keys(cls, **kwargs):
-        channel = Channel.init_by_keys(**{'server': kwargs.get('server'), 'name': kwargs.get('channel')})
-        return cls(channel, kwargs.get('sender'), kwargs.get('content'), kwargs.get('datetime'))
+    def init_by_keys(cls, **query):
+        return cls(Channel.init_by_keys(**query), query.get('sender'), query.get('content'), query.get('datetime'))
 
     @cached_property
     def query(self) -> dict:
@@ -52,3 +51,7 @@ class Message(PartyScope):
             'server': self.server.url, 'channel': self._channel.name, 'sender': self._sender,
             'content': self._content, 'datetime': self._datetime
         }
+
+    @cached_property
+    def parent(self):
+        return self.Parents[0].init_by_keys(**self.query)

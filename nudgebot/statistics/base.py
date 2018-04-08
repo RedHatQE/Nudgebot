@@ -110,7 +110,7 @@ class Statistics(Loggable, DataCollection, ToggledCachedProperties, SubclassesGe
             @keyword cached_only: `bool` Update only the cached ones if True and only if such statistics
                                   data exists in the statistics database, otherwise, update only the cached ones.
         """
-        self.logger.info(f'Collect statistics: {self}')
+        self.logger.info(f'Collecting statistics: {self}')
         data = self.db_data or {}
         data_exists = bool(data)
         for key, prop in self.dict(cached_only=cached_only and data_exists).items():
@@ -131,7 +131,7 @@ class Statistics(Loggable, DataCollection, ToggledCachedProperties, SubclassesGe
     @classmethod
     def init_by_event(cls, event):
         """Instantiating the PartyScope by the event"""
-        assert isinstance(event, Event)  # TODO: Exception
+        assert isinstance(event, Event), f'Instantiate {cls} by event required Event instance as argument, not {type(event)}'
         assert all((key in event.data) for key in cls.PartyScope.primary_keys), \
             'Primary keys not found in event data. should be: {}'.format(cls.PartyScope.primary_keys)
         return cls(**{k: event.data[k] for k in cls.PartyScope.primary_keys})

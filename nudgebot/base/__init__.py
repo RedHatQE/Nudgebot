@@ -1,4 +1,5 @@
 from abc import ABCMeta
+from threading import Thread as NativeThread, current_thread
 
 from enum import Enum
 
@@ -72,3 +73,14 @@ class SubclassesGetterMixin(object):
                 if cls in getattr(attr, '__mro__', []):
                     subclasses.append(attr)
         return subclasses
+
+
+class Thread(NativeThread):
+    """A thread wrapper"""
+    def __init__(self, daemon=True):
+        self._parent = current_thread()
+        NativeThread.__init__(self, name=self.__class__.__name__, daemon=daemon)
+
+    @property
+    def parent(self):
+        return self._parent

@@ -1,7 +1,7 @@
 from datetime import datetime
 import hashlib
 
-from nudgebot.thirdparty.base import Event, EventsFactory
+from nudgebot.thirdparty.base import Event, EventsFactory, BotSlave
 from nudgebot.thirdparty.irc.base import IRCparty
 from nudgebot.thirdparty.irc.message import Message
 
@@ -11,7 +11,7 @@ class IRCevent(Event):
 
 
 class MessageEvent(IRCevent):
-    PartyScopes = [Message]
+    PartyScope = Message
 
     def __init__(self, server, sender, channel, content, datetime_obj):
         self._server = server
@@ -38,6 +38,7 @@ class MessageMentionedMeEvent(MessageEvent):
 
 class IRCeventsFactory(EventsFactory):
     Party = IRCparty()
+    _check_for_new_events_interval = 1
 
     def build_events(self) -> list:
         events = []
@@ -53,3 +54,9 @@ class IRCeventsFactory(EventsFactory):
                         else:
                             events.append(MessageEvent(self.Party.client.server, sender, channel, content, now))
         return events
+
+
+class IRCbot(BotSlave):
+    Party = IRCparty()
+    EventsFactory = IRCeventsFactory()
+    handle_events_every = 1

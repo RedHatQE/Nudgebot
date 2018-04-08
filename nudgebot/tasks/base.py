@@ -51,18 +51,18 @@ class ConditionalTask(TaskBase):
     Should be defined in subclass:
         * Name: `str` The name of the task.
         * Party: `Party` The Party of the task.
-        * PartyScopes: (`list` of `PartyScope`) List of the party scopes that associated with this task. these party scope
-                       instances will be built once the task is handled.
+        * PartyScope: `PartyScope` The party scope that associated with this task. this party scope
+                       instance will be built once the task is being handled.
         * RUN_ONCE: (optional) `bool` Whether to run the task once when the condition is True.
         * ONLY_ON_CONDITION_CHANGED: (optional) `bool` run only if the condition has changed (become from False to True),
                                      default is True.
     """
-    PartyScopes = None
+    PartyScope = None
     RUN_ONCE = True
     ONLY_ON_CONDITION_CHANGED = True
 
-    def __init__(self, party_scopes, statistics, event=None):
-        self._party_scopes = party_scopes
+    def __init__(self, party_scope, statistics, event=None):
+        self._party_scope = party_scope
         self._statistics = statistics
         self._event = event
         super(ConditionalTask, self).__init__()
@@ -108,8 +108,12 @@ class ConditionalTask(TaskBase):
         return self.Party
 
     @cached_property
+    def party_scope(self):
+        return self._party_scope
+
+    @cached_property
     def party_scopes(self):
-        return self._party_scopes
+        return {ps.__class__: ps for ps in self._party_scope.hierarchy}
 
     @cached_property
     def statistics(self):
@@ -124,7 +128,7 @@ class ConditionalTask(TaskBase):
     def props(self):
         return {
             'party': self.party,
-            'party_scopes': self.party_scopes,
+            'party_scope': self.party_scope,
             'statistics': self.statistics,
             'event': self.event
         }
@@ -188,6 +192,8 @@ class ConditionalTask(TaskBase):
         if `ONLY_ON_CONDITION_CHANGED` is True it'll run only if the condition changed from False to True.
         After task has run, we store its record in the databse and we uncache the statistics and collect them again,
         that because the task could affect them.
+
+        @todo: Wrap the task through exception and prompt the bot administrator about the failure.
         """
         db_data = self.db_data
         self.logger.info(f'Checking task condition: {self}')

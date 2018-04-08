@@ -1,39 +1,39 @@
 from cached_property import cached_property
 
-from github.GithubException import UnknownObjectException
 from github.Repository import Repository as PyGithubRepository
+from github.GithubException import UnknownObjectException
 
-from nudgebot.thirdparty.github.base import PyGithubObjectWrapper, Github, GithubScope
+from nudgebot.thirdparty.github.base import PyGithubObjectWrapper, GithubScope
+from nudgebot.thirdparty.github.organization import Organization
+from nudgebot.thirdparty.github.user import User
 
 
 class Repository(PyGithubObjectWrapper, GithubScope):
-    Party = Github()
     PyGithubClass = PyGithubRepository
-    primary_keys = ['organization', 'name']
+    Parents = [Organization, User]
+    primary_keys = ['organization', 'repository']
 
     @classmethod
-    def instantiate(cls, organization, name):
+    def instantiate(cls, organization_or_user, name):
+        assert isinstance(organization_or_user, (Organization, User))
+        return cls(organization_or_user.api.get_repo(name), organization_or_user)
+
+    @classmethod
+    def init_by_keys(cls, **query):
         try:
-            org = cls.Party.client.get_organization(organization)
+            organization_or_user = Organization.init_by_keys(organization=query.get('organization'))
         except UnknownObjectException:
-            org = cls.Party.client.get_user(organization)
-        return cls(org.get_repo(name))
+            organization_or_user = User.instantiate(query.get('organization'))
+
+        return cls.instantiate(organization_or_user=organization_or_user, name=query.get('repository'))
+
+    @cached_property
+    def query(self) -> dict:
+        return {
+            'organization': self.organization_name,
+            'repository': self.name
+        }
 
     @cached_property
     def organization_name(self):
         return getattr(self.organization, 'name', getattr(self.owner, 'login'))
-
-    @cached_property
-    def parent(self):
-        return
-
-    @classmethod
-    def init_by_keys(cls, **kwargs):
-        return cls.instantiate(organization=kwargs.get('organization'), name=kwargs.get('name'))
-
-    @cached_property
-    def query(self)->dict:
-        return {
-            'organization': self.organization_name,
-            'name': self.name
-        }

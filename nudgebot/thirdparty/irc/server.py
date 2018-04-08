@@ -6,7 +6,7 @@ from nudgebot.thirdparty.irc.base import IRCparty
 
 class Server(PartyScope):
     Party = IRCparty()
-    primary_keys = ['url']
+    primary_keys = ['server']
     key = 'irc_server'
 
     def __init__(self, url):
@@ -18,8 +18,8 @@ class Server(PartyScope):
 
     @classmethod
     def init_by_keys(cls, **kwargs):
-        return cls(kwargs.get('url'))
+        return cls(kwargs.get('server'))
 
     @cached_property
-    def query(self)->dict:
-        return {'url': self._url}
+    def query(self) -> dict:
+        return {'server': self._url}

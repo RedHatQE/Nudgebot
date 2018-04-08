@@ -123,7 +123,6 @@ class CachedStack(DataCollection):
         self._name = name
         self._length = length
         self._length_exeeded = False
-        self.stack or self.db_collection.insert_one({'name': self._name, 'stack': []})
 
     def __repr__(self):
         return '<{} {}>'.format(self.__class__.__name__, self.stack)
@@ -146,6 +145,8 @@ class CachedStack(DataCollection):
         doc = self.db_collection.find_one({'name': self._name}, {'_id': False})
         if doc:
             return doc['stack']
+        else:
+            self.db_collection.insert_one({'name': self._name, 'stack': []})
         return []
 
     @property

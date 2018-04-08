@@ -43,3 +43,31 @@ class NoWrapperForPyGithubObjectException(BaseException):
     def __str__(self):
         return 'Could not found wrapper for PyGithub object: {};\nAll Wrappers:\n{}'.format(
             self._obj, '\n    '.join(['{} wraps {}'.format(c, c.PyGithubClass) for c in self._all_subclasses]))
+
+
+class CouldNotFindUserException(BaseException):
+    """An exception that raises when trying to instantiate a user that not found in the configuration file."""
+
+    def __init__(self, key, available_users=None):
+        """
+        @param key: `str` The user key.
+        @keyword available_users: (`list` of `str`) The list of the available users.
+        """
+        self._key = key
+        self._available_users = available_users
+
+    def __str__(self):
+        return f'Could not found user key "{self._key}". available: {self._available_users}'
+
+
+class SubThreadException(BaseException):
+    """An exception that raises when a sub thread has count an exception."""
+
+    def __init__(self, thread):
+        """
+        @param thread: `Thread` The thread.
+        """
+        self._thread = thread
+
+    def __str__(self):
+        return f'Thread "{self._thread.name}" has count an exception.'

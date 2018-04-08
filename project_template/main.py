@@ -1,4 +1,4 @@
-from assets import celery_runner, bot
+from assets import celery_runner, bot  # noqa
 
 
 def main():

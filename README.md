@@ -37,8 +37,57 @@ The library includes several third party libraries like IRC, Google calendar, Gi
 2. _Configure your project._
     - Create your configuration files from the templates inside the `./config` directory.
 3. _Create your [statistics class](https://github.com/gshefer/Nudgebot/blob/master/nudgebot/statistics/base.py)es inside the statistics package in the project._
+    - Example:
+      ```python
+      from nudgebot.statistics.base import statistic
+      from nudgebot.statistics.github import PullRequestStatistics
+      
+      class MyPrStatistics(PullRequestStatistics):
+      """In this statistics class we collect all the statistics that related to pull request."""
+      key = 'my_pr_stats'  # This key will be used to access this statistics in the tasks
+
+      # We decorate this getter with `statistic` decorator to indicate that this
+      # is a statistic that we would like to collect and save
+      @statistic
+      def total_number_of_comments(self):
+          return self.party_scope.comments
+
+      ```
     - [Example for statistics classes](https://github.com/gshefer/Nudgebot/blob/master/examples/project_a/statistics/__init__.py) could be found in the [example projects](https://github.com/gshefer/Nudgebot/tree/master/examples/project_a).
 4. _After you happy with your statistics. Create the [tasks](https://github.com/gshefer/Nudgebot/blob/master/nudgebot/tasks/base.py) inside the tasks package._
+    - Example:
+      ```python
+      from nudgebot.tasks import ConditionalTask
+      from nudgebot.thirdparty.github.base import Github
+      from nudgebot.thirdparty.github.pull_request import PullRequest
+      from nudgebot.thirdparty.irc.base import IRCparty
+
+
+      class PromptWhenLargeNumberOfComments(ConditionalTask):
+          """This task is prompting on IRC when there is a large number of comment in a pull request."""
+
+          Party = Github()                            # The third party for this task is Github.
+          PartyScope = PullRequest                    # The scope of this task is pull request.
+          NAME = 'PromptWhenLargeNumberOfComments'    # The name of the task.
+          PR_MAX_NUMBER_OF_COMMENTS = 10
+
+          @property
+          def condition(self):
+              # Checking that total number of comment is greater than `PR_MAX_NUMBER_OF_COMMENTS`.
+              return self.statistics.my_pr_stats.total_number_of_comments > self.PR_MAX_NUMBER_OF_COMMENTS
+
+          def get_artifacts(self):
+              return [str(self.statistics.my_pr_stats.total_number_of_comments)]
+
+          def run(self):
+              # Running the task
+              IRCparty().client.msg(
+                  '##bot-testing',
+                  f'PR#{self.statistics.my_pr_stats.number} has more than {self.PR_MAX_NUMBER_OF_COMMENTS} comments! '
+                  f'({self.statistics.my_pr_stats.total_number_of_comments} comments)'
+              )
+
+      ```
     - [Example for task classes](https://github.com/gshefer/Nudgebot/blob/master/examples/project_a/tasks/__init__.py) could be found in the [example projects](https://github.com/gshefer/Nudgebot/tree/master/examples/project_a).
 
 

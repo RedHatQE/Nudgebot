@@ -1,3 +1,5 @@
+import collections
+
 import os
 import smtplib
 import logging
@@ -54,7 +56,7 @@ def send_email(from_address, receivers, subject, body, attachments=None, text_fo
                                 .format(attachment))
                 msg.attach(part)
 
-    smtp_server = smtplib.SMTP('localhost')  # TODO: parameterize
+    smtp_server = smtplib.SMTP('localhost')
     smtp_server.sendmail(from_address, receivers, msg.as_string())
 
 
@@ -128,3 +130,59 @@ class RunEvery(object):
 
     def cancel(self):
         self.thread.cancel()
+
+
+def flatten_dict(d, parent_key='', sep='_'):
+    """
+    Flatten a dictionary to one dict
+
+    @param d: `dict` The dictionary to flat.
+    @keyword parent_key: `str` The parent key.
+    @keyword sep: `str` The separator that will be used to redefine the key.
+    @rtype: `dict`
+    """
+    items = []
+    for k, v in d.items():
+        new_key = parent_key + sep + k if parent_key else k
+        if isinstance(v, collections.MutableMapping):
+            items.extend(flatten_dict(v, new_key, sep=sep).items())
+        else:
+            items.append((new_key, v))
+    return dict(items)
+
+
+def getnode(iterable, keys_vector: tuple):
+    """
+    Trying to get a specific node in a dict. It's like dict.get but recursive.
+    Example:
+        >>> mydict = {'a': 1, 'b': {'c': 2}, 'c': 3, 'd': None}
+        >>> mylist = [1, [2, 3], 4]
+        >>> getnode(mydict, ['a'])
+        1
+        >>> getnode(mydict, ['b', 'c'])
+        2
+        >>> getnode(mylist, [1, 1])
+        3
+
+    @param iterable: (`dict` or `list` or `tuple` or any iterable object) The object to perform the node get.
+    @param keys_vector: (`list` or `tuple`) The keys vector (actually the path of the node).
+
+    """
+    assert isinstance(iterable, collections.Iterable), f'iterable argument must be an iterable object!, got {type(iterable)}'
+    assert isinstance(keys_vector, (list, tuple)), 'keys_vector argument must be a list or a tuple!'
+
+    current_node = iterable
+    for key in keys_vector:
+        if isinstance(current_node, collections.MutableMapping):
+            current_node = current_node.get(key, None)
+            if not current_node:
+                return
+        elif isinstance(current_node, collections.Sequence) and isinstance(key, int):
+            try:
+                current_node = current_node[key]
+            except IndexError:
+                return
+        else:
+            return
+
+    return current_node

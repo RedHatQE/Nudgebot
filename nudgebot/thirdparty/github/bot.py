@@ -1,60 +1,53 @@
 """This module includes the github Events and The Github event factory."""
-from github.IssueEvent import IssueEvent as PyGithubIssueEvent
+from github.GithubException import UnknownObjectException
 
-from nudgebot.thirdparty.base import Event, EventsFactory
-from nudgebot.thirdparty.github.issue import Issue
+from nudgebot.thirdparty.base import Event, EventsFactory, BotSlave, ScopesCollector
 from nudgebot.thirdparty.github.base import Github
-from nudgebot.thirdparty.github.pull_request import PullRequest
 from nudgebot.thirdparty.github.repository import Repository
+from nudgebot.thirdparty.github.pull_request import PullRequest
+from nudgebot.thirdparty.github.issue import Issue
 
 
 class GithubEventBase(Event):
     """A base class for Github event."""
     Party = Github()
 
-    def __init__(self, payload: dict):
-        assert isinstance(payload, dict)
-        self._payload = payload
+    def __init__(self, data: dict):
+        assert isinstance(data, dict)
+        self._data = data
+
+    @property
+    def type(self):
+        return self.data['type']
 
     @property
     def id(self):
-        return self._payload['id']
+        return self._data['id']
 
     @property
     def data(self):
-        return self._payload
+        return self._data
+
+# Events:
 
 
 class RepositoryEvent(GithubEventBase):
-    PartyScopes = [Repository]
+    PartyScope = Repository
 
 
 class IssueEvent(GithubEventBase):
-    PartyScopes = [Repository, Issue]
+    PartyScope = Issue
 
 
 class PullRequestEvent(GithubEventBase):
-    PartyScopes = [Repository, PullRequest]
+    PartyScope = PullRequest
+
+###
 
 
 class GithubEventsFactory(EventsFactory):
     Party = Github()
     _max_recent_check = 100  # Checking for at most <_max_recent_check> recent events and then break TODO: parameterize
-
-    def _fetch_type_and_number(self, payload: dict):
-        """Fetch the type of the event and the number, the number is None in case that is not pull request or issue event.
-
-        @param payload: `dict` The event payload.
-        """
-        pr = payload.get('pull_request')
-        if pr:
-            return PullRequestEvent, pr.get('number')
-        issue = payload.get('issue')
-        if issue:
-            if issue.get('pull_request'):
-                return PullRequestEvent, issue.get('number')
-            return IssueEvent, issue.get('number')
-        return RepositoryEvent, None
 
     def build_events(self) -> dict:
         events = []
@@ -79,27 +72,53 @@ class GithubEventsFactory(EventsFactory):
                     # TODO: Check whether the following is necessary...
                     # elif event.actor.login == CurrentProject().config.credentials.github.username:
                     #     continue
-                    if isinstance(event.api, PyGithubIssueEvent):
-                        payload = event.raw_data
-                    else:
-                        payload = event.payload
+                    try:
+                        data = event.raw_data
+                    except UnknownObjectException:
+                        break  # stale event
                     # Fill some required fields that could be missing in the timeline API but
-                    # coming with the webhooks for some reason
-                    payload['id'] = event.id
-                    payload['organization'] = getattr(repo.organization, 'name', repo.owner.login)
-                    payload['sender'] = {'login': event.actor.login}
-                    payload['repository'] = payload.get('repository', {'name': repo.name})
-                    event_klass, number = self._fetch_type_and_number(payload)
-                    if event_klass is RepositoryEvent:
-                        payload['name'] = payload['repository']['name']
+                    data['organization'], data['repository'] = repo.owner.name or repo.owner.login, repo.name
+                    data['sender'] = {'login': event.actor.login}
+                    data['type'] = data.get('type') or data.get('event')
+                    # Gathering facts
+                    payload = data.get('payload') or {}
+                    issue = payload.get('issue') or data.get('issue')
+                    pull_request = (issue or {}).get('pull_request') or payload.get('pull_request')
+                    # Classifying event:
+                    if pull_request:
+                        data['issue_number'] = int(pull_request['url'].split('/')[-1])
+                        event_obj = PullRequestEvent(data)
+                    elif issue:
+                        data['issue_number'] = issue['number']
+                        event_obj = IssueEvent(data)
                     else:
-                        payload['name'] = payload['repository'] = payload['repository']['name']
-                        payload['number'] = number
+                        event_obj = RepositoryEvent(data)
                     #
-                    events.append(event_klass(payload))
+                    events.append(event_obj)
                     # since we have number of getters we want to collect only (1 / len(event_getter_names))
                     # from each getter so we are adding the following to `i`
                     i += 1.0 * len(event_getter_names)
-        if events:
-            self.logger.info('Building events...')
         return events
+
+
+class GithubScopesCollector(ScopesCollector):
+    Party = Github()
+
+    def collect_all(self):
+        party_scopes = []
+        for repo in self.Party.repositories:
+            party_scopes.append(repo)
+            for pull_request in repo.get_pulls():
+                pull_request.repository = repo
+                party_scopes.append(pull_request)
+            for issue in repo.get_issues():
+                if not issue.pull_request:
+                    issue.repository = repo
+                    party_scopes.append(issue)
+        return party_scopes
+
+
+class GithubBot(BotSlave):
+    Party = Github()
+    EventsFactory = GithubEventsFactory()
+    ScopeCollector = GithubScopesCollector()

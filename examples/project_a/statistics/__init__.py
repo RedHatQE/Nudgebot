@@ -19,9 +19,15 @@ class MyPrStatistics(PullRequestStatistics):
     """In this statistics class we collect all the statistics that related to pull request."""
     key = 'my_pr_stats'  # This key will be used to access this statistics in the tasks
 
+    # We decorate this getter with `statistic` decorator to indicate that this
+    # is a statistic that we would like to collect and save
     @statistic
     def number_of_commits(self):
         return self.party_scope.commits
+
+    @statistic
+    def number(self):
+        return self.party_scope.issue_number
 
     @statistic
     def title(self):
@@ -57,16 +63,8 @@ class MyPrStatistics(PullRequestStatistics):
         return str(self.party_scope.updated_at)
 
     @statistic
-    def review_comments(self):
-        return self.party_scope.comments
-
-    @statistic
-    def issue_comments(self):
-        return self.party_scope.comments
-
-    @statistic
     def total_comments(self):
-        return self.issue_comments() + self.review_comments()
+        return self.party_scope.comments
 
     @statistic
     def title_tags(self):
@@ -98,6 +96,10 @@ class MyRepositoryStatistics(RepositoryStatistics):
     @cached_property
     def all_pull_requests(self):
         return list(self.party_scope.get_pulls(state='open'))
+
+    @statistic
+    def name(self):
+        return self.party_scope.name
 
     @statistic
     def number_of_open_pull_requests(self):
