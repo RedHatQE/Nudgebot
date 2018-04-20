@@ -1,3 +1,4 @@
+from collections import OrderedDict
 from cached_property import cached_property
 from types import MethodType
 
@@ -10,11 +11,28 @@ from nudgebot.log import Loggable
 
 
 class statistic(Loggable, toggled_cached_property):
-    """statistic markup"""
+    """Represents a statistic"""
 
     def __init__(self, getter):
         toggled_cached_property.__init__(self, getter)
+        self.prettify = None
         Loggable.__init__(self)
+
+    def __get__(self, obj, cls):
+        self.obj = obj
+        if self.obj and not hasattr(self.obj, '_toggled_cached_properties'):
+            self.obj._toggled_cached_properties = {}
+        return self
+
+    def pretty(self, func):
+
+        parent = self
+
+        def pretty(value=None):
+            return func(value or parent())
+
+        self.prettify = pretty
+        return self
 
     def __call__(self):
         self.logger.debug(f'Getting statistic: {self}')
@@ -40,7 +58,7 @@ class constant_statistic(statistic):
             @param key: `str` The key (name) of the property.
             @param value: The value of the property.
         """
-        def getter(*args):
+        def getter(*args):  # noqa
             return value
         self.obj = obj
         getter.__name__ = key
@@ -87,6 +105,14 @@ class Statistics(Loggable, DataCollection, ToggledCachedProperties, SubclassesGe
         """Adding the query attributes as statistic's"""
         for k, v in self._query.items():
             setattr(self, k, constant_statistic(self, k, v))
+
+    @classmethod
+    def reload(cls):
+        instances = []
+        for data in cls.get_db_collection().find({}, {'_id': False}):
+            instances.append(cls(**{k: v for k, v in data.items() if k in cls.PartyScope.primary_keys}))
+            instances[-1].set_cache(**data)
+        return instances
 
     @cached_property
     def query(self):
@@ -135,6 +161,15 @@ class Statistics(Loggable, DataCollection, ToggledCachedProperties, SubclassesGe
         assert all((key in event.data) for key in cls.PartyScope.primary_keys), \
             'Primary keys not found in event data. should be: {}'.format(cls.PartyScope.primary_keys)
         return cls(**{k: event.data[k] for k in cls.PartyScope.primary_keys})
+
+    def pretty_dict(self, cached_only=True):
+        pretty_dict = OrderedDict()
+        for key in self.PartyScope.primary_keys:
+            pretty_dict[key] = None
+        for k, v in self.dict(cached_only=cached_only).items():
+            print(k)
+            pretty_dict[k] = (getattr(self, k).prettify(v) if getattr(self, k).prettify else v)
+        return pretty_dict
 
 
 class StatisticsCollection(object):

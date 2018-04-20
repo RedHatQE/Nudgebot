@@ -59,7 +59,8 @@ class DatabaseClient(MongoClient):  # noqa
         if collection_name:
             collections = [getattr(db, collection_name)]
         else:
-            collections = [getattr(db, name) for name in db.collection_names()]
+            collections = [getattr(db, name) for name in db.collection_names()
+                           if name != 'system.indexes']
         data = {}
         for collection in collections:
             dismiss_id = {'_id': False} if dismiss_id else {}
@@ -98,13 +99,17 @@ class DataCollection(object):
         """
         return self.db_collection.update(query, work, {'upsert': True})
 
+    @classmethod
+    def get_db_collection(cls):
+        """Returns the database collection"""
+        assert cls.DATABASE_NAME is not None
+        assert cls.COLLECTION_NAME is not None
+        db = getattr(CurrentProject().db_client, cls.DATABASE_NAME)
+        return getattr(db, cls.COLLECTION_NAME)
+
     @property
     def db_collection(self):
-        """Returns the database collection"""
-        assert self.DATABASE_NAME is not None
-        assert self.COLLECTION_NAME is not None
-        db = getattr(CurrentProject().db_client, self.DATABASE_NAME)
-        return getattr(db, self.COLLECTION_NAME)
+        return self.get_db_collection()
 
 
 class CachedStack(DataCollection):

@@ -1,10 +1,4 @@
-from assets import celery_runner, bot  # noqa
-
-
-def main():
-    """Running celery and then runs the bot's mainloop"""
-    celery_runner.start()
-    bot.mainloop()
+from nudgebot.main import main
 
 
 if __name__ == '__main__':

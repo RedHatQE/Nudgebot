@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Nudgebot statistics dashboard</title>
+  	<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.16/css/jquery.dataTables.min.css">
+  	<link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/patternfly/3.24.0/css/patternfly.min.css">
+  	<link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/patternfly/3.24.0/css/patternfly-additions.min.css">
+</head>
+<body style="background: rgb(252,252,252);">
+	<h1>Nudgebot statistics dashboard</h1>
+	<div style="border: 1px solid rgb(222,222,222); padding: 3px;">
+    	{% for name, stats in data.items() %}
+    	<h2>{{ name }}</h2>
+    	<table class="table dataTable display compact row-border hover" id="{{ name | replace(" ", "_") }}">
+    		<thead>
+				<tr>
+					{% for key in stats[0].keys() %}
+			    	<th>{{ key }}</a></th>
+			    	{% endfor %}
+			  	</tr>
+		  	</thead>
+		  	<tbody>
+		  		{% for entry in stats %}
+		    	<tr>
+		    		{% for value in entry.values() %}
+					<td>{{ value }}</td>
+		    		{% endfor %}
+				</tr>
+				{% endfor %}
+			</tbody>
+		</table>
+		{% endfor %}
+    </div>
+    
+	<!-- jQuery library -->
+	<!-- Latest compiled JavaScript -->
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+	<script src="https://cdn.datatables.net/1.10.16/js/jquery.dataTables.min.js"></script>
+	<script>
+	{% for name in data.keys() %}
+	$(document).ready(function() 
+    { 
+        $("#{{ name | replace(" ", "_") }}").DataTable();
+    } 
+	); 
+	{% endfor %}
+	</script>
+</body>
+</html>

@@ -31,23 +31,23 @@ class SetReviewerWhenMovedToRFR(ConditionalTask):
         # We get the `title_tags` and `reviewers` statistics to check whether the title tag has moved
         # to RFR and that there are no reviewers that have been assigned.
         return (
-            'RFR' in self.statistics.my_pr_stats.title_tags and
-            not self.statistics.my_pr_stats.reviewers
+            'RFR' in self.statistics.my_pulls_statistics.title_tags and
+            not self.statistics.my_pulls_statistics.reviewers
         )
 
     def get_data(self):
         """Collecting data"""
         repos_data = next(repo for repo in CurrentProject().config.config.github.repositories
-                          if repo.name == self.statistics.my_repo_stats.repository)
+                          if repo.name == self.statistics.my_repo_statistics.repository)
         maintainers = repos_data.maintainers
         reviewer = choice(maintainers)
-        owner = self.statistics.my_pr_stats.owner
+        owner = self.statistics.my_pulls_statistics.owner
         reviewer_contact = User.get_user(github_login=reviewer)
         owner_contact = User.get_user(github_login=owner) or owner
         return owner_contact, reviewer_contact
 
     def get_artifacts(self):
-        return self.statistics.my_pr_stats.title_tags
+        return self.statistics.my_pulls_statistics.title_tags
 
     def run(self):
         """Running the task"""
@@ -111,8 +111,9 @@ class AlertOnMentionedUser(ConditionalTask):
             # Composing the comment from the statistics, mentioned users and actor
             IRCparty().client.msg(
                 '##bot-testing', f'{mentioned_user}, {actor} has '
-                f'mentioned you in {self.statistics.my_repo_stats.organization}/{self.statistics.my_repo_stats.repository} '
-                f'@ PR#{self.statistics.my_pr_stats.number}.'
+                f'mentioned you in {self.statistics.my_repo_statistics.organization}/'
+                f'{self.statistics.my_repo_statistics.repository} '
+                f'@ PR#{self.statistics.my_pulls_statistics.number}.'
             )
 
 

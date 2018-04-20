@@ -68,7 +68,6 @@ class ToggledCachedProperties(object):
             val = (getattr(self, k) if k != 'dict' else None)
             if isinstance(val, ToggledCachedProperties):
                 out[k] = ToggledCachedProperties.dict(val)
-                continue
             elif isinstance(val, toggled_cached_property):
                 out[k] = val()
         return out
@@ -78,3 +77,8 @@ class ToggledCachedProperties(object):
         self.initialize_cache_dict_if_not_exists()
         for k in list(self._toggled_cached_properties.keys()):
             del self._toggled_cached_properties[k]
+
+    def set_cache(self, **props):
+        """Caching provided properties"""
+        self.initialize_cache_dict_if_not_exists()
+        self._toggled_cached_properties.update(props)

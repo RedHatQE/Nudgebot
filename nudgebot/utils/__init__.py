@@ -1,4 +1,7 @@
 import collections
+from dateutil.parser import parse as dateparse
+from dateutil import tz
+from datetime import datetime
 
 import os
 import smtplib
@@ -186,3 +189,42 @@ def getnode(iterable, keys_vector: tuple):
             return
 
     return current_node
+
+
+def as_utc_time(datetime_obj, tzinfo=None, raise_if_native_time=True):
+    """Converting the datetime object to UTC time zone time
+    if raise_if_native_time: Raises ValueError: astimezone() cannot be applied to
+                             a naive datetime  if provided datetime_obj with tzinfo=None
+    """
+    if isinstance(datetime_obj, str):
+        datetime_obj = dateparse(datetime_obj)
+    if not datetime_obj.tzinfo and not raise_if_native_time:
+        return datetime_obj
+    local_dt = datetime_obj.astimezone(tz.tzutc())
+    return local_dt.replace(tzinfo=tzinfo)
+
+
+class Age(object):
+
+    def __init__(self, datetime_obj):
+        self._datetime_obj = as_utc_time(datetime_obj, raise_if_native_time=False)
+
+    @property
+    def total_seconds(self):
+        return int((datetime.utcnow() - self._datetime_obj).total_seconds())
+
+    @property
+    def days(self):
+        return self.total_seconds // 86400
+
+    @property
+    def hours(self):
+        return (self.total_seconds - self.days * 86400) // 3600
+
+    @property
+    def json(self):
+        return {'days': self.days, 'hours': self.hours, 'total_seconds': self.total_seconds}
+
+    @property
+    def pretty(self):
+        return '{} days and {} hours'.format(self.days, self.hours)
