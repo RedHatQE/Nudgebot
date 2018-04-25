@@ -44,18 +44,18 @@ The library includes several third party libraries like IRC, Google calendar, Gi
 
       class MyPrStatistics(PullRequestStatistics):
           """In this statistics class we collect all the statistics that related to pull request."""
-	  key = 'my_pr_stats'  # This key will be used to access this statistics in the tasks
-
-	  # We decorate this getter with `statistic` decorator to indicate that this
-	  # is a statistic that we would like to collect and save
-	  @statistic
-	  def total_number_of_comments(self):
-	      return self.scope.comments  # We can get the endpoint scope instance and use it (in this case it's PyGithub PullRequest).
+	      key = 'my_pr_stats'  # This key will be used to access this statistics in the tasks
+	      
+	      # We decorate this getter with `statistic` decorator to indicate that this
+	      # is a statistic that we would like to collect and save
+	      @statistic
+	      def total_number_of_comments(self):
+	          return self.scope.comments  # We can get the endpoint scope instance and use it (in this case it's PyGithub PullRequest).
 
       ```
     - ### [Example for statistics classes](https://github.com/gshefer/Nudgebot/blob/master/examples/project_a/statistics/__init__.py) could be found in the [example projects](https://github.com/gshefer/Nudgebot/tree/master/examples).
 4. _After you happy with your statistics. Create the [tasks](https://github.com/gshefer/Nudgebot/blob/master/nudgebot/tasks/base.py) inside the tasks package._
-    - Example:
+    - For example - a task that prompts on IRC when there is a large number of comment in a pull request:
       ```python
       from nudgebot.tasks import ConditionalTask
       from nudgebot.thirdparty.github.base import Github
@@ -72,54 +72,21 @@ The library includes several third party libraries like IRC, Google calendar, Gi
 
 	    @property
 	    def condition(self):
-		# Checking that total number of comment is greater than 10.
-		return self.statistics.my_pr_stats.total_number_of_comments > self.PR_MAX_NUMBER_OF_COMMENTS
+		    # Checking that total number of comment is greater than 10.
+		    return self.statistics.my_pr_stats.total_number_of_comments > self.PR_MAX_NUMBER_OF_COMMENTS
 
 	    def get_artifacts(self):
-		return [str(self.statistics.my_pr_stats.total_number_of_comments)]
+		    return [str(self.statistics.my_pr_stats.total_number_of_comments)]
 
 	    def run(self):
-		"""Running the task"""
-		IRCendpoint().client.msg(
-		    '##bot-testing',
-		    f'PR#{self.statistics.my_pr_stats.number} has more than {self.PR_MAX_NUMBER_OF_COMMENTS} comments! '
-		    f'({self.statistics.my_pr_stats.total_number_of_comments} comments)'
-		)
+		    """Running the task"""
+		    IRCendpoint().client.msg(
+		    	'##bot-testing',
+		    	f'PR#{self.statistics.my_pr_stats.number} has more than {self.PR_MAX_NUMBER_OF_COMMENTS} comments! '
+		    	f'({self.statistics.my_pr_stats.total_number_of_comments} comments)'
+		    )
         ```
-     - We can create tasks for the other third party endpoints as well, like IRC, For example - an IRC conditional task that when we send "Nudgebot, #pr" we receive back the number of pull requests for each repository and "pong" when we send "Nudgebot, ping":
-	    ```python
-	    class IRCAnswerQuestion(ConditionalTask):
-		    """This task answer once someone send message to the bot in IRC."""
-
-		    Endpoint = IRCendpoint()      # The third party Endpoint for this task is IRC.
-		    EndpointScope = Message       # The scope of this task is pull request.
-		    NAME = 'IRCAnswerQuestion'    # The name of the task.
-		    RUN_ONCE = False              # Indicate that the task will always run. not only in the first occurrence.
-
-		    @property
-		    def condition(self):
-			return self.event and isinstance(self.event, MessageMentionedMeEvent)
-
-		    def run(self):
-			me = self.Endpoint.client.nick
-			content, sender, channel = self.scope.content, self.scope.sender, self.scope.channel
-
-			def answer(content):
-			    return self.Endpoint.client.msg(channel.name, f'{sender}, {content}')
-
-			if f'{me}, ping' == content:
-			    answer('pong')
-			elif f'{me}, #pr' == content:
-			    answer(', '.join([
-				f'{repo.name}: {repo.number_of_open_issues}'
-				for repo in self.all_statistics.github_repository
-			    ]))
-			else:
-			    answer(f'Unknown option "{content}"')
-			    self.Endpoint.client.msg(channel.name, 'options:')
-			    self.Endpoint.client.msg(channel.name, '    ping - Get pong back.')
-			    self.Endpoint.client.msg(channel.name, '    #pr - Number of open pull requests per repository.')
-	    ```
+     - We can create tasks for the other third party endpoints as well, like IRC, For example - an IRC conditional task that when we send "Nudgebot, #pr" we receive back the number of pull requests for each repository and "pong" when we send "Nudgebot, ping": https://github.com/gshefer/Nudgebot/blob/master/examples/project_a/tasks/__init__.py#L120
 	    Then in the IRC:
 	    ```
 	    <gshefer> Nudgebot, ping
