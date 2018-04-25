@@ -14,7 +14,7 @@
     	<table class="table dataTable display compact row-border hover" id="{{ name | replace(" ", "_") }}">
     		<thead>
 				<tr>
-					{% for key in stats[0].keys() %}
+					{% for key in (stats[0].keys() if stats else []) %}
 			    	<th>{{ key }}</a></th>
 			    	{% endfor %}
 			  	</tr>

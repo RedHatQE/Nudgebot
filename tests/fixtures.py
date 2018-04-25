@@ -63,24 +63,24 @@ def statistics_classes():
     class MyPrStatistics(PullRequestStatistics):
         @statistic
         def number_of_commits(self):
-            return self.party_scope.commits
+            return self.scope.commits
 
         @statistic
         def title(self):
-            return self.party_scope.title
+            return self.scope.title
 
         @statistic
         def owner(self):
-            return self.party_scope.user.login
+            return self.scope.user.login
 
     class MyRepositoryStatistics(RepositoryStatistics):
         @statistic
         def number_of_closed_pull_requests(self):
-            return len(list(self.party_scope.get_pulls(state='closed')))
+            return len(list(self.scope.get_pulls(state='closed')))
 
         @statistic
         def number_of_open_pull_requests(self):
-            return len(list(self.party_scope.get_pulls(state='open')))
+            return len(list(self.scope.get_pulls(state='open')))
 
     return {
         MyPrStatistics.COLLECTION_NAME: MyPrStatistics,

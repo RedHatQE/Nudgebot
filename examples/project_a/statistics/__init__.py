@@ -22,24 +22,24 @@ class MyPrStatistics(PullRequestStatistics):
     # is a statistic that we would like to collect and save
     @statistic
     def number_of_commits(self):
-        return self.party_scope.commits
+        return self.scope.commits
 
     @statistic
     def title(self):
-        return self.party_scope.title
+        return self.scope.title
 
     @statistic
     def owner(self):
-        return self.party_scope.user.login
+        return self.scope.user.login
 
     @statistic
     def state(self):
-        return self.party_scope.state
+        return self.scope.state
 
     @statistic
     def test_results(self):
         auth = (CurrentProject().config.credentials.github.username, CurrentProject().config.credentials.github.password)
-        tests = json.loads(requests.get(self.party_scope.raw_data['statuses_url'], auth=auth).content)
+        tests = json.loads(requests.get(self.scope.raw_data['statuses_url'], auth=auth).content)
         out = {}
         for test in tests:
             out[test['context']] = test['description']
@@ -47,7 +47,7 @@ class MyPrStatistics(PullRequestStatistics):
 
     @statistic
     def last_code_update(self):
-        return str(list(self.party_scope.get_commits()).pop().last_modified)
+        return str(list(self.scope.get_commits()).pop().last_modified)
 
     @last_code_update.pretty
     def last_code_update(last_code_update):  # noqa
@@ -55,7 +55,7 @@ class MyPrStatistics(PullRequestStatistics):
 
     @statistic
     def last_update(self):
-        return str(self.party_scope.updated_at)
+        return str(self.scope.updated_at)
 
     @last_update.pretty
     def last_update(last_update):  # noqa
@@ -63,7 +63,7 @@ class MyPrStatistics(PullRequestStatistics):
 
     @statistic
     def total_comments(self):
-        return self.party_scope.comments
+        return self.scope.comments
 
     @statistic
     def title_tags(self):
@@ -76,8 +76,8 @@ class MyPrStatistics(PullRequestStatistics):
     @statistic
     def reviewers(self):
         return list(set(
-            [review.user.login for review in self.party_scope.get_reviews()] +
-            [review_request.login for review_request in self.party_scope.get_reviewer_requests()]
+            [review.user.login for review in self.scope.get_reviews()] +
+            [review_request.login for review_request in self.scope.get_reviewer_requests()]
         ))
 
     @reviewers.pretty
@@ -89,15 +89,15 @@ class MyIssueStatistics(IssueStatistics):
     """In this statistics class we collect all the statistics that related to issues."""
     @statistic
     def created_at(self):
-        return self.party_scope.created_at
+        return self.scope.created_at
 
     @statistic
     def number_of_comments(self):
-        return self.party_scope.comments
+        return self.scope.comments
 
     @statistic
     def assignee(self):
-        return getattr(self.party_scope.assignee, 'login', None)
+        return getattr(self.scope.assignee, 'login', None)
 
 
 class MyRepositoryStatistics(RepositoryStatistics):
@@ -106,12 +106,12 @@ class MyRepositoryStatistics(RepositoryStatistics):
 
     @statistic
     def name(self):
-        return self.party_scope.name
+        return self.scope.name
 
     @statistic
     def number_of_open_issues(self):
-        return self.party_scope.open_issues_count
+        return self.scope.open_issues_count
 
     @statistic
     def forks_count(self):
-        return self.party_scope.forks_count
+        return self.scope.forks_count

@@ -10,7 +10,7 @@ from nudgebot.thirdparty.github.issue import Issue
 
 class GithubEventBase(Event):
     """A base class for Github event."""
-    Party = Github()
+    Endpoint = Github()
 
     def __init__(self, data: dict):
         assert isinstance(data, dict)
@@ -32,27 +32,27 @@ class GithubEventBase(Event):
 
 
 class RepositoryEvent(GithubEventBase):
-    PartyScope = Repository
+    EndpointScope = Repository
 
 
 class IssueEvent(GithubEventBase):
-    PartyScope = Issue
+    EndpointScope = Issue
 
 
 class PullRequestEvent(GithubEventBase):
-    PartyScope = PullRequest
+    EndpointScope = PullRequest
 
 ###
 
 
 class GithubEventsFactory(EventsFactory):
-    Party = Github()
+    Endpoint = Github()
     _max_recent_check = 100  # Checking for at most <_max_recent_check> recent events and then break TODO: parameterize
 
     def build_events(self) -> dict:
         events = []
         event_getter_names = ('get_events', 'get_issues_events')
-        for repo in self.Party.repositories:
+        for repo in self.Endpoint.repositories:
             for getter in event_getter_names:
                 i = 0
                 for event in getattr(repo, getter)():
@@ -102,23 +102,23 @@ class GithubEventsFactory(EventsFactory):
 
 
 class GithubScopesCollector(ScopesCollector):
-    Party = Github()
+    Endpoint = Github()
 
     def collect_all(self):
-        party_scopes = []
-        for repo in self.Party.repositories:
-            party_scopes.append(repo)
+        scopes = []
+        for repo in self.Endpoint.repositories:
+            scopes.append(repo)
             for pull_request in repo.get_pulls():
                 pull_request.repository = repo
-                party_scopes.append(pull_request)
+                scopes.append(pull_request)
             for issue in repo.get_issues():
                 if not issue.pull_request:
                     issue.repository = repo
-                    party_scopes.append(issue)
-        return party_scopes
+                    scopes.append(issue)
+        return scopes
 
 
 class GithubBot(BotSlave):
-    Party = Github()
+    Endpoint = Github()
     EventsFactory = GithubEventsFactory()
     ScopeCollector = GithubScopesCollector()

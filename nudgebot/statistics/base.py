@@ -5,7 +5,7 @@ from types import MethodType
 from nudgebot.base import SubclassesGetterMixin
 from nudgebot.base.toggle_cached_properties import toggled_cached_property
 from nudgebot.base.toggle_cached_properties import ToggledCachedProperties
-from nudgebot.thirdparty.base import Party, PartyScope, Event
+from nudgebot.thirdparty.base import EndpointScope, Event
 from nudgebot.db.db import DataCollection
 from nudgebot.log import Loggable
 
@@ -68,7 +68,7 @@ class constant_statistic(statistic):
 
 class Statistics(Loggable, DataCollection, ToggledCachedProperties, SubclassesGetterMixin):
     """
-    The Statistics class represents a bunch of statistics that related to a scope of some party.
+    The Statistics class represents a bunch of statistics that related to a scope of some Endpoint.
     Once you define a Statistics class you can start to create the statistic getters which will
     be used to calculate and cache the statistics. once you call to a `statistic` object it
     calculates (i.e. run the getter), cache the returned value and return it, then, the next time you'll
@@ -76,26 +76,23 @@ class Statistics(Loggable, DataCollection, ToggledCachedProperties, SubclassesGe
     in order to un-cache all the statistics you can call self.uncache_all().
     In order to collect the statistics and store them in the database you can use self.collect() method.
     Should be defined in subclass:
-        * Party: `Party` The Party of this Statistics.
-        * PartyScope: `PartyScope` The Party of this Statistics.
+        * EndpointScope: `EndpointScope` The Endpoint scope of this Statistics.
         * COLLECTION_NAME: `str` The name of the collection in the statistics database.
         * key: a Unique key identifier for the statistics.
     """
-    Party = None
-    PartyScope = None
+    EndpointScope = None
     COLLECTION_NAME = None
     key = None
     DATABASE_NAME = 'statistics'
 
     def __init__(self, **query):
-        assert self.Party and isinstance(self.Party, Party)
-        assert self.PartyScope and PartyScope in self.PartyScope.__mro__
+        assert self.EndpointScope and EndpointScope in self.EndpointScope.__mro__
         assert self.COLLECTION_NAME and isinstance(self.COLLECTION_NAME, str)
         assert self.key and isinstance(self.key, str)
-        assert all(k in self.PartyScope.primary_keys for k in query.keys())
+        assert all(k in self.EndpointScope.primary_keys for k in query.keys())
         Loggable.__init__(self)
         self._query = query
-        self._party_scope = None
+        self._scope = None
         self._add_query_to_stats()
 
     def __repr__(self):
@@ -110,7 +107,7 @@ class Statistics(Loggable, DataCollection, ToggledCachedProperties, SubclassesGe
     def reload(cls):
         instances = []
         for data in cls.get_db_collection().find({}, {'_id': False}):
-            instances.append(cls(**{k: v for k, v in data.items() if k in cls.PartyScope.primary_keys}))
+            instances.append(cls(**{k: v for k, v in data.items() if k in cls.EndpointScope.primary_keys}))
             instances[-1].set_cache(**data)
         return instances
 
@@ -120,11 +117,11 @@ class Statistics(Loggable, DataCollection, ToggledCachedProperties, SubclassesGe
         return self._query
 
     @cached_property
-    def party_scope(self):
-        """Return the party scope instance of the statistics"""
-        if not self._party_scope:
-            self._party_scope = self.PartyScope.init_by_keys(**self._query)
-        return self._party_scope
+    def scope(self):
+        """Return the endpoint scope instance of the statistics"""
+        if not self._scope:
+            self._scope = self.EndpointScope.init_by_keys(**self._query)
+        return self._scope
 
     @property
     def db_data(self):
@@ -146,28 +143,27 @@ class Statistics(Loggable, DataCollection, ToggledCachedProperties, SubclassesGe
             return
         self.db_collection.insert_one(data)
 
-    def set_party_scope(self, party_scope: PartyScope):
-        """Settings the party scope instance directly, this is in case that we already have it and want to prevent
-        it from get it via the party API.
+    def set_endpoint_scope(self, scope: EndpointScope):
+        """Settings the endpoint scope instance directly, this is in case that we already have it and want to prevent
+        it from get it via the Endpoint API.
         """
-        assert isinstance(party_scope, PartyScope), 'party_scope must be an instance of `{}`, not `{}`'.format(
-            getattr(PartyScope, '__name__'), type(party_scope))
-        self._party_scope = party_scope
+        assert isinstance(scope, EndpointScope), 'scope must be an instance of `{}`, not `{}`'.format(
+            getattr(EndpointScope, '__name__'), type(scope))
+        self._scope = scope
 
     @classmethod
     def init_by_event(cls, event):
-        """Instantiating the PartyScope by the event"""
+        """Instantiating the EndpointScope by the event"""
         assert isinstance(event, Event), f'Instantiate {cls} by event required Event instance as argument, not {type(event)}'
-        assert all((key in event.data) for key in cls.PartyScope.primary_keys), \
-            'Primary keys not found in event data. should be: {}'.format(cls.PartyScope.primary_keys)
-        return cls(**{k: event.data[k] for k in cls.PartyScope.primary_keys})
+        assert all((key in event.data) for key in cls.EndpointScope.primary_keys), \
+            'Primary keys not found in event data. should be: {}'.format(cls.EndpointScope.primary_keys)
+        return cls(**{k: event.data[k] for k in cls.EndpointScope.primary_keys})
 
     def pretty_dict(self, cached_only=True):
         pretty_dict = OrderedDict()
-        for key in self.PartyScope.primary_keys:
+        for key in self.EndpointScope.primary_keys:
             pretty_dict[key] = None
         for k, v in self.dict(cached_only=cached_only).items():
-            print(k)
             pretty_dict[k] = (getattr(self, k).prettify(v) if getattr(self, k).prettify else v)
         return pretty_dict
 

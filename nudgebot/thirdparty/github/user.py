@@ -2,16 +2,16 @@ from cached_property import cached_property
 from github.NamedUser import NamedUser
 
 from nudgebot.thirdparty.github.base import PyGithubObjectWrapper
-from nudgebot.thirdparty.base import PartyScope
+from nudgebot.thirdparty.base import EndpointScope
 
 
-class User(PyGithubObjectWrapper, PartyScope):
+class User(PyGithubObjectWrapper, EndpointScope):
     PyGithubClass = NamedUser
     primary_keys = ['login']
 
     @classmethod
     def instantiate(cls, login):
-        return cls(cls.Party.client.get_user(login))
+        return cls(cls.Endpoint.client.get_user(login))
 
     @classmethod
     def init_by_keys(cls, **query):

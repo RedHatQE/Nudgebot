@@ -1,13 +1,13 @@
 from datetime import datetime
 
-from nudgebot.thirdparty.base import PartyScope
-from nudgebot.thirdparty.irc.base import IRCparty
+from nudgebot.thirdparty.base import EndpointScope
+from nudgebot.thirdparty.irc.base import IRCendpoint
 from nudgebot.thirdparty.irc.channel import Channel
 from cached_property import cached_property
 
 
-class Message(PartyScope):
-    Party = IRCparty()
+class Message(EndpointScope):
+    Party = IRCendpoint()
     primary_keys = ['server', 'channel', 'sender', 'content', 'datetime']
     Parents = [Channel]
 

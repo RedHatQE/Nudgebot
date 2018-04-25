@@ -9,11 +9,12 @@ from nudgebot.db.db import DataCollection
 from nudgebot.utils import underscored
 from nudgebot.statistics.base import StatisticsCollection
 from nudgebot.settings import CurrentProject
+from nudgebot.thirdparty.base import EndpointScope
 
 
 class TaskBase(Loggable, DataCollection, SubclassesGetterMixin):
     """A base class for a task"""
-    Party = None
+    Endpoint = None
     NAME = None
     DATABASE_NAME = 'tasks'
 
@@ -27,9 +28,10 @@ class TaskBase(Loggable, DataCollection, SubclassesGetterMixin):
         collections = [getattr(statistics_database, name) for name in statistics_database.collection_names()]
         return AttributeDict.attributize_dict({collection.name: list(collection.find()) for collection in collections})
 
-    @cached_property
-    def COLLECTION_NAME(self):
-        return underscored(self.NAME)
+    @classmethod
+    def get_db_collection(cls):
+        cls.COLLECTION_NAME = underscored(cls.NAME)
+        return super(TaskBase, cls).get_db_collection()
 
     def run(self):
         raise NotImplementedError()
@@ -50,19 +52,20 @@ class ConditionalTask(TaskBase):
 
     Should be defined in subclass:
         * Name: `str` The name of the task.
-        * Party: `Party` The Party of the task.
-        * PartyScope: `PartyScope` The party scope that associated with this task. this party scope
-                       instance will be built once the task is being handled.
+        * Endpoint: `Endpoint` The Endpoint of the task.
+        * EndpointScope: `EndpointScope` The endpoint scope that associated with this task. this endpoint scope
+                                         instance will be built once the task is being handled.
         * RUN_ONCE: (optional) `bool` Whether to run the task once when the condition is True.
         * ONLY_ON_CONDITION_CHANGED: (optional) `bool` run only if the condition has changed (become from False to True),
                                      default is True.
     """
-    PartyScope = None
+    EndpointScope = None  # noqa
     RUN_ONCE = True
     ONLY_ON_CONDITION_CHANGED = True
 
-    def __init__(self, party_scope, statistics, event=None):
-        self._party_scope = party_scope
+    def __init__(self, scope: EndpointScope, statistics, event=None):
+        assert isinstance(scope, EndpointScope)
+        self._scope = scope
         self._statistics = statistics
         self._event = event
         super(ConditionalTask, self).__init__()
@@ -104,16 +107,16 @@ class ConditionalTask(TaskBase):
         self.db_collection.update_one(self.query, {'$addToSet': {'records': record}})
 
     @cached_property
-    def party(self):
-        return self.Party
+    def endpoint(self):
+        return self.Endpoint
 
     @cached_property
-    def party_scope(self):
-        return self._party_scope
+    def scope(self):
+        return self._scope
 
     @cached_property
-    def party_scopes(self):
-        return {ps.__class__: ps for ps in self._party_scope.hierarchy}
+    def scopes(self):
+        return {ps.__class__: ps for ps in self._scope.hierarchy}
 
     @cached_property
     def statistics(self):
@@ -127,8 +130,8 @@ class ConditionalTask(TaskBase):
     @property
     def props(self):
         return {
-            'party': self.party,
-            'party_scope': self.party_scope,
+            'endpoint': self.endpoint,
+            'endpoint_scope': self.scope,
             'statistics': self.statistics,
             'event': self.event
         }

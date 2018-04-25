@@ -26,8 +26,8 @@ class Bot(Loggable):
         self._tasks = tasks
         self._slaves = []
         for slave_cls in (GithubBot, IRCbot):
-            slave_stats = [stats for stats in statistics if stats.Party == slave_cls.Party]
-            slave_tasks = [task for task in tasks if task.Party == slave_cls.Party]
+            slave_stats = [stats for stats in statistics if stats.Endpoint == slave_cls.Endpoint]
+            slave_tasks = [task for task in tasks if task.Endpoint == slave_cls.Endpoint]
             slave = slave_cls(slave_stats, slave_tasks)
             self._slaves.append(slave)
 

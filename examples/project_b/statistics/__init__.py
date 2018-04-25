@@ -15,4 +15,4 @@ class MyPrStatistics(PullRequestStatistics):
     # is a statistic that we would like to collect and save
     @statistic
     def total_number_of_comments(self):
-        return self.party_scope.comments
+        return self.scope.comments

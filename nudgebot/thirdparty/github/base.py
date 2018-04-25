@@ -1,4 +1,4 @@
-"""Base classes for Github third party."""
+"""Base classes for Github third party Endpoint."""
 from types import FunctionType, MethodType
 
 from cached_property import cached_property
@@ -7,11 +7,11 @@ from github.PaginatedList import PaginatedList
 from github.GithubObject import GithubObject as PyGithubObject
 
 from nudgebot.exceptions import NoWrapperForPyGithubObjectException
-from nudgebot.thirdparty.base import Party, PartyScope, APIclass
+from nudgebot.thirdparty.base import Endpoint, EndpointScope, APIclass
 
 
-class Github(Party):
-    """The Github Party."""
+class Github(Endpoint):
+    """The Github Endpoint."""
 
     key = 'github'
 
@@ -31,8 +31,8 @@ class Github(Party):
                             timeout=60)
 
 
-class GithubScope(PartyScope):
-    """A Github party scope"""
+class GithubScope(EndpointScope):
+    """A Github endpoint scope"""
     pass
 
 
@@ -73,7 +73,7 @@ class PyGithubObjectWrapper(GithubObject):
         * PyGithubClass: `PyGithubObject` The pygithub object that the class wraps.
     """
 
-    Party = Github()
+    Endpoint = Github()
     PyGithubClass = PyGithubObject  # Overwrite this!
 
     def __init__(self, pygithub_object, parent=None):

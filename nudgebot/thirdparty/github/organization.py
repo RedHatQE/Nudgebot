@@ -11,7 +11,7 @@ class Organization(PyGithubObjectWrapper, GithubScope):
 
     @classmethod
     def instantiate(cls, name):
-        return cls(cls.Party.client.get_organization(name))
+        return cls(cls.Endpoint.client.get_organization(name))
 
     @classmethod
     def init_by_keys(cls, **query):

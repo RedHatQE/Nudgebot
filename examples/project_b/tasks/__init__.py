@@ -1,15 +1,15 @@
 from nudgebot.tasks import ConditionalTask, PeriodicTask  # noqa
 from nudgebot.thirdparty.github.base import Github
 from nudgebot.thirdparty.github.pull_request import PullRequest
-from nudgebot.thirdparty.irc.base import IRCparty
+from nudgebot.thirdparty.irc.base import IRCendpoint
 
 
 class PromptWhenLargeNumberOfComments(ConditionalTask):
     """This task is prompting on IRC when there is a large number of comment in a pull request"""
 
-    Party = Github()                            # The third party for this task is Github.
-    PartyScope = PullRequest                    # The scope of this task is pull request.
-    NAME = 'PromptWhenLargeNumberOfComments'    # The name of the task.
+    Endpoint = Github()                            # The third party Endpoint for this task is Github.
+    EndpointScope = PullRequest                    # The scope of this task is pull request.
+    NAME = 'PromptWhenLargeNumberOfComments'       # The name of the task.
     PR_MAX_NUMBER_OF_COMMENTS = 10
 
     @property
@@ -22,7 +22,7 @@ class PromptWhenLargeNumberOfComments(ConditionalTask):
 
     def run(self):
         """Running the task"""
-        IRCparty().client.msg(
+        IRCendpoint().client.msg(
             '##bot-testing',
             f'PR#{self.statistics.my_pr_stats.number} has more than {self.PR_MAX_NUMBER_OF_COMMENTS} comments! '
             f'({self.statistics.my_pr_stats.total_number_of_comments} comments)'

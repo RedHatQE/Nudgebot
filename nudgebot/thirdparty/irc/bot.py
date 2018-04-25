@@ -2,16 +2,16 @@ from datetime import datetime
 import hashlib
 
 from nudgebot.thirdparty.base import Event, EventsFactory, BotSlave
-from nudgebot.thirdparty.irc.base import IRCparty
+from nudgebot.thirdparty.irc.base import IRCendpoint
 from nudgebot.thirdparty.irc.message import Message
 
 
 class IRCevent(Event):
-    Party = IRCparty()
+    Endpoint = IRCendpoint()
 
 
 class MessageEvent(IRCevent):
-    PartyScope = Message
+    EndpointScope = Message
 
     def __init__(self, server, sender, channel, content, datetime_obj):
         self._server = server
@@ -37,26 +37,26 @@ class MessageMentionedMeEvent(MessageEvent):
 
 
 class IRCeventsFactory(EventsFactory):
-    Party = IRCparty()
+    Endpoint = IRCendpoint()
     _check_for_new_events_interval = 1
 
     def build_events(self) -> list:
         events = []
-        lines = self.Party.client.read_lines()
+        lines = self.Endpoint.client.read_lines()
         if lines:
             now = datetime.now()
             for line in lines:
-                records = self.Party.client.parse_messages(line)
+                records = self.Endpoint.client.parse_messages(line)
                 if records:
                     for sender, channel, content in records:
-                        if self.Party.client.nick in content:
-                            events.append(MessageMentionedMeEvent(self.Party.client.server, sender, channel, content, now))
+                        if self.Endpoint.client.nick in content:
+                            events.append(MessageMentionedMeEvent(self.Endpoint.client.server, sender, channel, content, now))
                         else:
-                            events.append(MessageEvent(self.Party.client.server, sender, channel, content, now))
+                            events.append(MessageEvent(self.Endpoint.client.server, sender, channel, content, now))
         return events
 
 
 class IRCbot(BotSlave):
-    Party = IRCparty()
+    Endpoint = IRCendpoint()
     EventsFactory = IRCeventsFactory()
     handle_events_every = 1

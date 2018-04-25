@@ -9,7 +9,7 @@ from nudgebot.thirdparty.github.pull_request import PullRequest
 from nudgebot.thirdparty.github.repository import Repository
 from nudgebot.utils import send_email, getnode
 from nudgebot.tasks.base import PeriodicTask
-from nudgebot.thirdparty.irc.base import IRCparty
+from nudgebot.thirdparty.irc.base import IRCendpoint
 from nudgebot.thirdparty.irc.bot import MessageMentionedMeEvent
 from nudgebot.thirdparty.irc.message import Message
 from nudgebot.settings import CurrentProject
@@ -22,9 +22,9 @@ from nudgebot.config.user import User
 class SetReviewerWhenMovedToRFR(ConditionalTask):
     """This task adding a reviewer once the title includes an '[RFR]' tag"""
 
-    Party = Github()                        # The third party for this task is Github.
-    PartyScope = PullRequest                # The scope of this task is pull request.
-    NAME = 'SetReviewerWhenMovedToRFR'      # The name of the task.
+    Endpoint = Github()                        # The third party Endpoint for this task is Github.
+    EndpointScope = PullRequest                # The scope of this task is pull request.
+    NAME = 'SetReviewerWhenMovedToRFR'         # The name of the task.
 
     @property
     def condition(self):
@@ -53,15 +53,15 @@ class SetReviewerWhenMovedToRFR(ConditionalTask):
         """Running the task"""
         owner_contact, reviewer_contact = self.get_data()
         owner_contact = (owner_contact.irc_nick if isinstance(owner_contact, User) else owner_contact)
-        self.party_scopes[PullRequest].add_reviewers(reviewer_contact.github)
+        self.scopes[PullRequest].add_reviewers(reviewer_contact.github)
 
 
 class AlertOnMergedEvent(ConditionalTask):
     """Alert when some pull request has been merged"""
 
-    Party = Github()                        # The third party for this task is Github.
-    PartyScope = Repository                 # The scope of this task is pull request.
-    NAME = 'AlertOnMergedEvent'             # The name of the task.
+    Endpoint = Github()                        # The third party Endpoint for this task is Github.
+    EndpointScope = Repository                 # The scope of this task is pull request.
+    NAME = 'AlertOnMergedEvent'                # The name of the task.
 
     @property
     def condition(self):
@@ -77,14 +77,14 @@ class AlertOnMergedEvent(ConditionalTask):
     def run(self):
         actor = self.event.data['sender']['login']
         number = self.event.data['payload']['pull_request']['number']
-        IRCparty().client.msg('##bot-testing', f'{actor} has merged PR#{number}')
+        IRCendpoint().client.msg('##bot-testing', f'{actor} has merged PR#{number}')
 
 
 class AlertOnMentionedUser(ConditionalTask):
     """This task prompt the user in IRC once he was mentioned in some pull request."""
 
-    Party = Github()
-    PartyScope = PullRequest
+    Endpoint = Github()
+    EndpointScope = PullRequest
     NAME = 'AlertOnMentionedUser'
     RUN_ONCE = False
 
@@ -109,7 +109,7 @@ class AlertOnMentionedUser(ConditionalTask):
             user = User.get_user(github_login=mentioned_user.login)
             mentioned_user = (user.irc_nick if user else mentioned_user.login)
             # Composing the comment from the statistics, mentioned users and actor
-            IRCparty().client.msg(
+            IRCendpoint().client.msg(
                 '##bot-testing', f'{mentioned_user}, {actor} has '
                 f'mentioned you in {self.statistics.my_repo_statistics.organization}/'
                 f'{self.statistics.my_repo_statistics.repository} '
@@ -120,42 +120,34 @@ class AlertOnMentionedUser(ConditionalTask):
 class IRCAnswerQuestion(ConditionalTask):
     """This task answer once someone send message to the bot in IRC."""
 
-    Party = IRCparty()
-    PartyScope = Message
-    NAME = 'IRCAnswerQuestion'
-    RUN_ONCE = False
+    Endpoint = IRCendpoint()      # The third party Endpoint for this task is IRC.
+    EndpointScope = Message       # The scope of this task is pull request.
+    NAME = 'IRCAnswerQuestion'    # The name of the task.
+    RUN_ONCE = False              # Indicate that the task will always run. not only in the first occurrence.
 
     @property
     def condition(self):
         return self.event and isinstance(self.event, MessageMentionedMeEvent)
 
     def run(self):
-        me = self.Party.client.nick
-        content = self.party_scopes[Message].content
-        sender = self.party_scopes[Message].sender
-        channel = self.party_scopes[Message].channel
+        me = self.Endpoint.client.nick
+        content, sender, channel = self.scope.content, self.scope.sender, self.scope.channel
 
         def answer(content):
-            return self.Party.client.msg(channel.name, f'{sender}, {content}')
+            return self.Endpoint.client.msg(channel.name, f'{sender}, {content}')
 
         if f'{me}, ping' == content:
             answer('pong')
         elif f'{me}, #pr' == content:
             answer(', '.join([
-                f'{repo.name}: {repo.number_of_open_pull_requests}'
+                f'{repo.name}: {repo.number_of_open_issues}'
                 for repo in self.all_statistics.github_repository
             ]))
-        elif f'{me}, #comments' == content:
-            answer(
-                '\n'.join([
-                    f'PR#{pr.number} in repository {pr.repository} has {pr.total_comments} comments.'
-                    for pr in self.all_statistics.github_pull_request
-                ])
-            )
         else:
-            answer('options:')
-            self.Party.client.msg(channel.name, '    #pr - Number of open pull requests per repository.')
-            self.Party.client.msg(channel.name, '    ping - Get pong back.')
+            answer(f'Unknown option "{content}"')
+            self.Endpoint.client.msg(channel.name, 'options:')
+            self.Endpoint.client.msg(channel.name, '    ping - Get pong back.')
+            self.Endpoint.client.msg(channel.name, '    #pr - Number of open pull requests per repository.')
 
 
 class DailyReport(PeriodicTask):

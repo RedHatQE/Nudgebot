@@ -16,9 +16,9 @@ from nudgebot.log import Loggable
 from nudgebot.exceptions import SubThreadException
 
 
-class Party(SubclassesGetterMixin, metaclass=Singleton):
+class Endpoint(SubclassesGetterMixin, metaclass=Singleton):
     """
-    The Party class represents the actual third party interface.
+    The Endpoint class represents the actual third party interface.
 
     It holds the credentials, metadata and the api client.
         Should be defined in subclass:
@@ -57,39 +57,39 @@ class APIclass(object):
     """
     A marker for API class. each API class should inherit this.
 
-    e.g. The PullRequest class is an API class of the Github party
+    e.g. The PullRequest class is an API class of the Github Endpoint.
     """
 
     pass
 
 
-class PartyScope(SubclassesGetterMixin, APIclass):
+class EndpointScope(SubclassesGetterMixin, APIclass):
     """
-    Party scope is used to separate the Party into scopes.
+    Endpoint scope is used to separate the Endpoint into scopes.
 
     It used for:
         1. have a bridge between the received event and the produced APIclass instances.
         2. Distinguish among the collected statistics (i.e. which statistics to collect after the event received).
-    Every time the bot receives an Event from the party's EventHandler, it maps the event data into instances
-    of these PartyScope's (which are APIclass's). Implementation example:
-        pull request event has the party scopes `Repository` and `PullRequest`, hence, every time the Bot receives
+    Every time the bot receives an Event from the Endpoint's EventFactory, it maps the event data into instances
+    of these EndpointScope's (which are APIclass's). Implementation example:
+        pull request event has the endpoint scopes `Repository` and `PullRequest`, hence, every time the Bot receives
         a PullRequestEvent from the GithubEventHandler, it creates instances of Repository and PullRequest using the init_by_keys
-        method. then it collect the statistics that has these party scopes.
+        method. then it collect the statistics that has these endpoint scopes.
     Should be defined in subclass:
-        * Party: `Party` The party instance of the scope.
+        * Endpoint: `Endpoint` The endpoint instance of the scope.
         * primary_keys: (`list` of `str`) The primary keys of this scope, it used to be able to distinguish among the instances
                         and be able to instantiate them independently from these keys without using a parent(s). In case that the
-                        PartyScope primary_key is None, it will treat it as singleton scope, e.g. Settings panel is probably a
+                        EndpointScope primary_key is None, it will treat it as singleton scope, e.g. Settings panel is probably a
                         single view in some application.
                         for example:
                             The primary keys of a pull request are 'organization', 'repository' and 'number', these the key
                             elements actually distinguish among all the pull requests in Github and provide the ability to
                             instantiate a pull request independently without instantiating repository and then pass it to
                             the instantiate method.
-        * Parents: The parent party scopes, for example: The parent of Repository are [Organization, User].
+        * Parents: The parent endpoint scopes, for example: The parent of Repository are [Organization, User].
     """
 
-    Party = None
+    Endpoint = None
     primary_keys = []
     Parents = []
 
@@ -111,9 +111,9 @@ class PartyScope(SubclassesGetterMixin, APIclass):
     @cached_property
     def parent(self):
         """
-        Return the parent party scope.
+        Return the parent endpoint scope.
 
-        @rtype: `PartyScope`.
+        @rtype: `EndpointScope`.
         """
         return  # Optional to overwrite
 
@@ -136,7 +136,7 @@ class PartyScope(SubclassesGetterMixin, APIclass):
     @cached_property
     def hierarchy(self):
         hierarchy = [self]
-        while issubclass(hierarchy[-1].__class__, PartyScope) and hierarchy[-1].parent:
+        while issubclass(hierarchy[-1].__class__, EndpointScope) and hierarchy[-1].parent:
             hierarchy.append(hierarchy[-1].parent)
         return hierarchy
 
@@ -154,7 +154,7 @@ class PartyScope(SubclassesGetterMixin, APIclass):
 
     @classmethod
     def is_singleton_scope(cls):
-        """Return whether this party scope is a singleton or not."""
+        """Return whether this endpoint scope is a singleton or not."""
         return not cls.primary_keys
 
 
@@ -162,15 +162,15 @@ class Event(SubclassesGetterMixin):
     """
     An Event class represents an event that happens in the party.
 
-    each event has party scopes which are being instantiated using its data. For example:
+    each event has endpoint scope which is being instantiated using its data. For example:
         RepositoryEvent creates a instance Repository instance which later used to collect statistics.
     Should be defined in subclass:
-        * Party: `Party`
-        * PartyScope: The party scope of the event. for more info - read the PartyScope docstring.
+        * Endpoint: `Endpoint`
+        * EndpointScope: The endpoint scope of the event. for more info - read the EndpointScope docstring.
     """
 
-    Party = None
-    PartyScope = None
+    Endpoint = None
+    EndpointScope = None
 
     def __repr__(self):
         return '<{} id={}, hash={}>'.format(self.__class__.__name__, self.id, self.hash)
@@ -183,21 +183,21 @@ class Event(SubclassesGetterMixin):
     @property
     def data(self) -> dict:
         """
-        Return the data of the event. this data will use to instantiate the PartyScope.
+        Return the data of the event. this data will use to instantiate the EndpointScope.
 
-        @attention: this data dict must include all the primary key values of the associated PartyScope
+        @attention: this data dict must include all the primary key values of the associated EndpointScope
         """
         raise NotImplementedError()
 
     @property
-    def party(self):
-        """Return the Party of the event."""
-        return self.Party
+    def endpoint(self):
+        """Return the endpoint of the event."""
+        return self.Endpoint
 
     @classmethod
     def hash_by_id(cls, event_id):
         """Return the hash for the event using ID only"""
-        return '{}::{}'.format(cls.Party.key, event_id)
+        return '{}::{}'.format(cls.Endpoint.key, event_id)
 
     @property
     def hash(self):
@@ -207,7 +207,7 @@ class Event(SubclassesGetterMixin):
 
 class EventsFactory(Loggable, Thread, metaclass=Singleton):
     """
-    An events factory is used to listen to the party, detect, and classify new events in the third party.
+    An events factory is used to listen to the endpoint, detect, and classify new events in the third party.
 
     The events factory is running asynchronously and collect new events and store them in the events buffer.
     Every X seconds interval (`_check_for_new_events_interval`) it calls to `build_events` which responsible to get
@@ -215,10 +215,10 @@ class EventsFactory(Loggable, Thread, metaclass=Singleton):
     Each time the parent is calling to `pull_event`, it's popping the first event in the buffer and return it.
 
     Should be defined in subclass:
-        * Party: `Party` The events factory's party.
+        * Endpoint: `Endpoint` The events factory's endpoint.
     """
 
-    Party: Party = None
+    Endpoint: Endpoint = None
     _dilivered_events_stack = CachedStack('delivered_events',
                                           length=CurrentProject().config.config.events.delivered_stack_length)
     _check_for_new_events_interval = CurrentProject().config.config.events.check_interval
@@ -284,36 +284,36 @@ class EventsFactory(Loggable, Thread, metaclass=Singleton):
 
 class ScopesCollector(object, metaclass=Singleton):
     """
-    ScopeCollector is used to collect all the scopes in the party in order to perform a poll.
+    ScopeCollector is used to collect all the scopes in the endpoint in order to perform a poll.
 
-    For example, in the github party, the scope collector is used to collect all the repositories, pull requests, issues, etc.
+    For example, in the github endpoint, the scope collector is used to collect all the repositories, pull requests, issues, etc.
     and then with this object we will be able to collect the statistics and perform tasks.
-    Some parties are not pollable (e.g. The IRC party) so there is no need to implement this.
+    Some parties are not pollable (e.g. The IRC endpoint) so there is no need to implement this.
 
     """
 
-    Party = None
+    Endpoint = None
 
     def collect_all(self) -> list:
-        """A factory method that build and return all the scope instances of the party"""
+        """A factory method that build and return all the scope instances of the endpoint"""
         raise NotImplementedError()
 
 
 class BotSlave(Thread):
-    """Bot slave is the party's bot.
+    """Bot slave is the endpoint's bot.
 
     It is running in its own thread and responsible for handling the events, collecting the statistics, handling the tasks
-    and the polls for the specific party.
+    and the polls for the specific Endpoint.
     Each cycle it's pull event from its events factory, collecting statistics and handling the tasks.
 
     Should be defined in subclass:
-        * Party: `Party` The bot's party.
+        * Endpoint: `Endpoint` The bot's endpoint.
         * EventsFactory: `EventsFactory` The bot's events factory.
         * ScopeCollector (Optional): `ScopeCollector` In case that the bot is pollable you should provide this.
 
     """
 
-    Party = None
+    Endpoint: Endpoint = None
     EventsFactory = None
     ScopeCollector = None
     handle_events_every = 10  # The timeout between the events handling, optional to overwrite.
@@ -340,18 +340,18 @@ class BotSlave(Thread):
         """Return whether the bot is pollable or not"""
         return bool(self.ScopeCollector)
 
-    def get_conditional_tasks(self, party_scope=None):
+    def get_conditional_tasks(self, scope: EndpointScope=None):
         """
         Return the conditional tasks of this bot.
 
-        @keyword party_scope: `PartyScope` The party scope to filter by.
+        @keyword scope: `EndpointScope` The endpoint scope to filter by.
         @rtype: `ConditionalTask`
         """
         from nudgebot.tasks import ConditionalTask
         conditional_tasks = [task for task in self._tasks if issubclass(task, ConditionalTask)]
-        if party_scope:
-            static_hierarchy = [ps.__class__ for ps in party_scope.hierarchy]
-            conditional_tasks = [task for task in conditional_tasks if task.PartyScope in static_hierarchy]
+        if scope:
+            static_hierarchy = [ps.__class__ for ps in scope.hierarchy]
+            conditional_tasks = [task for task in conditional_tasks if task.EndpointScope in static_hierarchy]
         return conditional_tasks
 
     def poll(self):
@@ -365,18 +365,18 @@ class BotSlave(Thread):
         self._busy_mutext.acquire()
         try:
             self.logger.info('Stating poll')
-            for party_scope in self.ScopeCollector.collect_all():
+            for scope in self.ScopeCollector.collect_all():
                 stats_collection = []
                 for stat_class in self._statistics:
-                    for parent in party_scope.hierarchy:
-                        if stat_class.PartyScope == parent.__class__:
+                    for parent in scope.hierarchy:
+                        if stat_class.EndpointScope == parent.__class__:
                             statistics = stat_class(**parent.query)  # TODO: Init from scope
-                            statistics.set_party_scope(parent)
+                            statistics.set_endpoint_scope(parent)
                             self.logger.debug(f'Collecting statistics: {statistics}')
                             statistics.collect()
                             stats_collection.append(statistics)
-                for task_cls in self.get_conditional_tasks(party_scope):
-                    task = task_cls(party_scope, stats_collection)
+                for task_cls in self.get_conditional_tasks(scope):
+                    task = task_cls(scope, stats_collection)
                     task.handle()
 
             self.logger.info('Finished poll')
@@ -391,23 +391,23 @@ class BotSlave(Thread):
             event = self.EventsFactory.pull_event()
             while event:
                 self.logger.debug('Handling new event: {}'.format(event.id))
-                event_party_scope_classes = event.PartyScope.get_static_hierarchy()
+                event_endpoint_scope_classes = event.EndpointScope.get_static_hierarchy()
                 stat_collection = []
                 for statistics_cls in self._statistics:
-                    if statistics_cls.PartyScope in event_party_scope_classes:
+                    if statistics_cls.EndpointScope in event_endpoint_scope_classes:
                         statistics = statistics_cls.init_by_event(event)
                         self.logger.debug(f'Collecting statistics: {statistics}')
                         stat_collection.append(statistics)
                         statistics.collect()
                 self.logger.debug('Checking for tasks to run')
                 for task_cls in self.get_conditional_tasks():
-                    if task_cls.PartyScope in event_party_scope_classes:
-                        task_party_scope_classes = task_cls.PartyScope.get_static_hierarchy()
+                    if task_cls.EndpointScope in event_endpoint_scope_classes:
+                        task_endpoint_scope_classes = task_cls.EndpointScope.get_static_hierarchy()
                         statistics = []
                         for stats in stat_collection:
-                            if stats.Party == task_cls.Party and stats.PartyScope in task_party_scope_classes:
+                            if stats.Endpoint == task_cls.Endpoint and stats.EndpointScope in task_endpoint_scope_classes:
                                 statistics.append(stats)
-                        task = task_cls(event.PartyScope.init_by_event(event), statistics, event)
+                        task = task_cls(event.EndpointScope.init_by_event(event), statistics, event)
                         task.handle()
                 event = self.EventsFactory.pull_event()
         finally:

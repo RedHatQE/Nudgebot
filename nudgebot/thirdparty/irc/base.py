@@ -8,7 +8,7 @@ from types import MethodType, FunctionType
 from threading import RLock
 import logging
 from nudgebot.utils import RunEvery
-from nudgebot.thirdparty.base import Party
+from nudgebot.thirdparty.base import Endpoint
 
 
 class required_connection(object):
@@ -180,7 +180,7 @@ class IRCclient(Loggable):
         return records  # [(<sender>, <channel>, <message>), ]
 
 
-class IRCparty(Party):
+class IRCendpoint(Endpoint):
     key = 'irc'
 
     @cached_property

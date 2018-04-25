@@ -1,12 +1,12 @@
 from cached_property import cached_property
 
-from nudgebot.thirdparty.base import PartyScope
-from nudgebot.thirdparty.irc.base import IRCparty
+from nudgebot.thirdparty.base import EndpointScope
+from nudgebot.thirdparty.irc.base import IRCendpoint
 from nudgebot.thirdparty.irc.server import Server
 
 
-class Channel(PartyScope):
-    Party = IRCparty()
+class Channel(EndpointScope):
+    Endpoint = IRCendpoint()
     Parents = [Server]
     primary_keys = ['server', 'channel']
 

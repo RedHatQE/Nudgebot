@@ -50,7 +50,7 @@ The library includes several third party libraries like IRC, Google calendar, Gi
       # is a statistic that we would like to collect and save
       @statistic
       def total_number_of_comments(self):
-          return self.party_scope.comments
+          return self.scope.comments  # We can get the endpoint scope instance and use it (in this case it's PyGithub PullRequest).
 
       ```
     - [Example for statistics classes](https://github.com/gshefer/Nudgebot/blob/master/examples/project_a/statistics/__init__.py) could be found in the [example projects](https://github.com/gshefer/Nudgebot/tree/master/examples/project_a).
@@ -60,35 +60,76 @@ The library includes several third party libraries like IRC, Google calendar, Gi
       from nudgebot.tasks import ConditionalTask
       from nudgebot.thirdparty.github.base import Github
       from nudgebot.thirdparty.github.pull_request import PullRequest
-      from nudgebot.thirdparty.irc.base import IRCparty
+      from nudgebot.thirdparty.irc.base import IRCendpoint
 
 
       class PromptWhenLargeNumberOfComments(ConditionalTask):
-          """This task is prompting on IRC when there is a large number of comment in a pull request."""
+    """This task is prompting on IRC when there is a large number of comment in a pull request"""
 
-          Party = Github()                            # The third party for this task is Github.
-          PartyScope = PullRequest                    # The scope of this task is pull request.
-          NAME = 'PromptWhenLargeNumberOfComments'    # The name of the task.
-          PR_MAX_NUMBER_OF_COMMENTS = 10
+    Endpoint = Github()                            # The third party Endpoint for this task is Github.
+    EndpointScope = PullRequest                    # The scope of this task is pull request.
+    NAME = 'PromptWhenLargeNumberOfComments'       # The name of the task.
+    PR_MAX_NUMBER_OF_COMMENTS = 10
 
-          @property
-          def condition(self):
-              # Checking that total number of comment is greater than `PR_MAX_NUMBER_OF_COMMENTS`.
-              return self.statistics.my_pr_stats.total_number_of_comments > self.PR_MAX_NUMBER_OF_COMMENTS
+    @property
+    def condition(self):
+        # Checking that total number of comment is greater than 10.
+        return self.statistics.my_pr_stats.total_number_of_comments > self.PR_MAX_NUMBER_OF_COMMENTS
 
-          def get_artifacts(self):
-              return [str(self.statistics.my_pr_stats.total_number_of_comments)]
+    def get_artifacts(self):
+        return [str(self.statistics.my_pr_stats.total_number_of_comments)]
 
-          def run(self):
-              # Running the task
-              IRCparty().client.msg(
-                  '##bot-testing',
-                  f'PR#{self.statistics.my_pr_stats.number} has more than {self.PR_MAX_NUMBER_OF_COMMENTS} comments! '
-                  f'({self.statistics.my_pr_stats.total_number_of_comments} comments)'
-              )
+    def run(self):
+        """Running the task"""
+        IRCendpoint().client.msg(
+            '##bot-testing',
+            f'PR#{self.statistics.my_pr_stats.number} has more than {self.PR_MAX_NUMBER_OF_COMMENTS} comments! '
+            f'({self.statistics.my_pr_stats.total_number_of_comments} comments)'
+        )
+
 
       ```
-    - [Example for task classes](https://github.com/gshefer/Nudgebot/blob/master/examples/project_a/tasks/__init__.py) could be found in the [example projects](https://github.com/gshefer/Nudgebot/tree/master/examples/project_a).
+    - We can create tasks for the other third party endpoints as well like IRC, For example - an IRC conditional task that when we send "Nudgebot, #pr" we receive back the number of pull requests for each repository and "pong" when we send "Nudgebot, ping":
+    ```python
+    class IRCAnswerQuestion(ConditionalTask):
+	    """This task answer once someone send message to the bot in IRC."""
+	
+	    Endpoint = IRCendpoint()      # The third party Endpoint for this task is IRC.
+	    EndpointScope = Message       # The scope of this task is pull request.
+	    NAME = 'IRCAnswerQuestion'    # The name of the task.
+	    RUN_ONCE = False              # Indicate that the task will always run. not only in the first occurrence.
+	
+	    @property
+	    def condition(self):
+	        return self.event and isinstance(self.event, MessageMentionedMeEvent)
+	
+	    def run(self):
+	        me = self.Endpoint.client.nick
+	        content, sender, channel = self.scope.content, self.scope.sender, self.scope.channel
+	
+	        def answer(content):
+	            return self.Endpoint.client.msg(channel.name, f'{sender}, {content}')
+	
+	        if f'{me}, ping' == content:
+	            answer('pong')
+	        elif f'{me}, #pr' == content:
+	            answer(', '.join([
+	                f'{repo.name}: {repo.number_of_open_issues}'
+	                for repo in self.all_statistics.github_repository
+	            ]))
+	        else:
+	            answer(f'Unknown option "{content}"')
+	            self.Endpoint.client.msg(channel.name, 'options:')
+	            self.Endpoint.client.msg(channel.name, '    ping - Get pong back.')
+	            self.Endpoint.client.msg(channel.name, '    #pr - Number of open pull requests per repository.')
+    ```
+    Then in the IRC:
+    	<gshefer> Nudgebot, ping
+		<Nudgebot> gshefer, pong
+		<gshefer> Nudgebot, #pr
+		<Nudgebot> gshefer, integration_tests: 170, wrapanapi: 14, TestingRepo: 3
+
+    - _[Example for task classes](https://github.com/gshefer/Nudgebot/blob/master/examples/project_a/tasks/__init__.py) could be found in the [example projects](https://github.com/gshefer/Nudgebot/tree/master/examples/project_a)._
 
 
 ### Running the project
@@ -97,7 +138,7 @@ After you configured your statistics and tasks, to start the bot mainloop you sh
 Once you run it, it'll run the celery app in the background, create an initial poll and then will run the bot mainloop.
 To run the dashboard app that present the statistics:
 ```python main.py run_server```
-Then you'll have a dashboard that presents all the collected statistics. for example, the dashboard of project_b will be:
+Then you'll have a dashboard that presents all the collected statistics. for example, the dashboard of project_a will be:
 ![alt text](https://raw.githubusercontent.com/gshefer/Nudgebot/master/docs/project_b_dashboard.png)
 
 

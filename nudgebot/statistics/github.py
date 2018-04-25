@@ -6,22 +6,22 @@ from nudgebot.thirdparty.github.pull_request import PullRequest
 
 
 class GithubStatisticsBase(Statistics):
-    Party = Github()
+    Endpoint = Github()
 
 
 class RepositoryStatistics(GithubStatisticsBase):
-    PartyScope = Repository
+    EndpointScope = Repository
     COLLECTION_NAME = 'github_repository'
     key = COLLECTION_NAME
 
 
 class IssueStatistics(GithubStatisticsBase):
-    PartyScope = Issue
+    EndpointScope = Issue
     COLLECTION_NAME = 'github_issue'
     key = COLLECTION_NAME
 
 
 class PullRequestStatistics(GithubStatisticsBase):
-    PartyScope = PullRequest
+    EndpointScope = PullRequest
     COLLECTION_NAME = 'github_pull_request'
     key = COLLECTION_NAME
