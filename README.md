@@ -53,7 +53,7 @@ The library includes several third party libraries like IRC, Google calendar, Gi
 	      return self.scope.comments  # We can get the endpoint scope instance and use it (in this case it's PyGithub PullRequest).
 
       ```
-    - [Example for statistics classes](https://github.com/gshefer/Nudgebot/blob/master/examples/project_a/statistics/__init__.py) could be found in the [example projects](https://github.com/gshefer/Nudgebot/tree/master/examples/project_a).
+    - ### [Example for statistics classes](https://github.com/gshefer/Nudgebot/blob/master/examples/project_a/statistics/__init__.py) could be found in the [example projects](https://github.com/gshefer/Nudgebot/tree/master/examples).
 4. _After you happy with your statistics. Create the [tasks](https://github.com/gshefer/Nudgebot/blob/master/nudgebot/tasks/base.py) inside the tasks package._
     - Example:
       ```python
@@ -85,48 +85,49 @@ The library includes several third party libraries like IRC, Google calendar, Gi
 		    f'PR#{self.statistics.my_pr_stats.number} has more than {self.PR_MAX_NUMBER_OF_COMMENTS} comments! '
 		    f'({self.statistics.my_pr_stats.total_number_of_comments} comments)'
 		)
-	```
-    - We can create tasks for the other third party endpoints as well like IRC, For example - an IRC conditional task that when we send "Nudgebot, #pr" we receive back the number of pull requests for each repository and "pong" when we send "Nudgebot, ping":
-    ```python
-    class IRCAnswerQuestion(ConditionalTask):
-	    """This task answer once someone send message to the bot in IRC."""
-	
-	    Endpoint = IRCendpoint()      # The third party Endpoint for this task is IRC.
-	    EndpointScope = Message       # The scope of this task is pull request.
-	    NAME = 'IRCAnswerQuestion'    # The name of the task.
-	    RUN_ONCE = False              # Indicate that the task will always run. not only in the first occurrence.
-	
-	    @property
-	    def condition(self):
-	        return self.event and isinstance(self.event, MessageMentionedMeEvent)
-	
-	    def run(self):
-	        me = self.Endpoint.client.nick
-	        content, sender, channel = self.scope.content, self.scope.sender, self.scope.channel
-	
-	        def answer(content):
-	            return self.Endpoint.client.msg(channel.name, f'{sender}, {content}')
-	
-	        if f'{me}, ping' == content:
-	            answer('pong')
-	        elif f'{me}, #pr' == content:
-	            answer(', '.join([
-	                f'{repo.name}: {repo.number_of_open_issues}'
-	                for repo in self.all_statistics.github_repository
-	            ]))
-	        else:
-	            answer(f'Unknown option "{content}"')
-	            self.Endpoint.client.msg(channel.name, 'options:')
-	            self.Endpoint.client.msg(channel.name, '    ping - Get pong back.')
-	            self.Endpoint.client.msg(channel.name, '    #pr - Number of open pull requests per repository.')
-    ```
-    Then in the IRC:
-    	<gshefer> Nudgebot, ping
-		<Nudgebot> gshefer, pong
-		<gshefer> Nudgebot, #pr
-		<Nudgebot> gshefer, integration_tests: 170, wrapanapi: 14, TestingRepo: 3
+        ```
+     - We can create tasks for the other third party endpoints as well, like IRC, For example - an IRC conditional task that when we send "Nudgebot, #pr" we receive back the number of pull requests for each repository and "pong" when we send "Nudgebot, ping":
+	    ```python
+	    class IRCAnswerQuestion(ConditionalTask):
+		    """This task answer once someone send message to the bot in IRC."""
 
-    - _[Example for task classes](https://github.com/gshefer/Nudgebot/blob/master/examples/project_a/tasks/__init__.py) could be found in the [example projects](https://github.com/gshefer/Nudgebot/tree/master/examples/project_a)._
+		    Endpoint = IRCendpoint()      # The third party Endpoint for this task is IRC.
+		    EndpointScope = Message       # The scope of this task is pull request.
+		    NAME = 'IRCAnswerQuestion'    # The name of the task.
+		    RUN_ONCE = False              # Indicate that the task will always run. not only in the first occurrence.
+
+		    @property
+		    def condition(self):
+			return self.event and isinstance(self.event, MessageMentionedMeEvent)
+
+		    def run(self):
+			me = self.Endpoint.client.nick
+			content, sender, channel = self.scope.content, self.scope.sender, self.scope.channel
+
+			def answer(content):
+			    return self.Endpoint.client.msg(channel.name, f'{sender}, {content}')
+
+			if f'{me}, ping' == content:
+			    answer('pong')
+			elif f'{me}, #pr' == content:
+			    answer(', '.join([
+				f'{repo.name}: {repo.number_of_open_issues}'
+				for repo in self.all_statistics.github_repository
+			    ]))
+			else:
+			    answer(f'Unknown option "{content}"')
+			    self.Endpoint.client.msg(channel.name, 'options:')
+			    self.Endpoint.client.msg(channel.name, '    ping - Get pong back.')
+			    self.Endpoint.client.msg(channel.name, '    #pr - Number of open pull requests per repository.')
+	    ```
+	    Then in the IRC:
+	    ```
+	    <gshefer> Nudgebot, ping
+	    <Nudgebot> gshefer, pong
+	    <gshefer> Nudgebot, #pr
+	    <Nudgebot> gshefer, integration_tests: 170, wrapanapi: 14, TestingRepo: 3
+	    ```
+    - ### _[Example for task classes](https://github.com/gshefer/Nudgebot/blob/master/examples/project_a/tasks/__init__.py) could be found in the [example projects](https://github.com/gshefer/Nudgebot/tree/master/examples)._
 
 
 ### Running the project
