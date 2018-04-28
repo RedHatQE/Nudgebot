@@ -12,9 +12,14 @@ class GithubEventBase(Event):
     """A base class for Github event."""
     Endpoint = Github()
 
-    def __init__(self, data: dict):
+    def __init__(self, data: dict, artifacts: dict):
         assert isinstance(data, dict)
         self._data = data
+        self._artifacts = artifacts
+
+    @property
+    def artifacts(self) -> dict:
+        return self._artifacts
 
     @property
     def type(self):
@@ -87,12 +92,12 @@ class GithubEventsFactory(EventsFactory):
                     # Classifying event:
                     if pull_request:
                         data['issue_number'] = int(pull_request['url'].split('/')[-1])
-                        event_obj = PullRequestEvent(data)
+                        event_obj = PullRequestEvent(data, event.artifacts)
                     elif issue:
                         data['issue_number'] = issue['number']
-                        event_obj = IssueEvent(data)
+                        event_obj = IssueEvent(data, event.artifacts)
                     else:
-                        event_obj = RepositoryEvent(data)
+                        event_obj = RepositoryEvent(data, event.artifacts)
                     #
                     events.append(event_obj)
                     # since we have number of getters we want to collect only (1 / len(event_getter_names))

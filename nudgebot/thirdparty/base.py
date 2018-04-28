@@ -190,6 +190,13 @@ class Event(SubclassesGetterMixin):
         raise NotImplementedError()
 
     @property
+    def artifacts(self) -> dict:
+        """
+        Returns the event artifacts.
+        """
+        return {}
+
+    @property
     def endpoint(self):
         """Return the endpoint of the event."""
         return self.Endpoint

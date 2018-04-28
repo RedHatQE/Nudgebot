@@ -162,8 +162,8 @@ class DailyReport(PeriodicTask):
         for pr_stats in self.all_statistics.github_pull_request:
             if pr_stats.repository not in data:
                 data[pr_stats.repository] = {}
-            data[pr_stats.repository][pr_stats.number] = pr_stats
-            data[pr_stats.repository][pr_stats.number].update({
+            data[pr_stats.repository][pr_stats.issue_number] = pr_stats
+            data[pr_stats.repository][pr_stats.issue_number].update({
                 'comments': pr_stats.total_comments,
                 'commits': pr_stats.number_of_commits,
                 'reviewers': pr_stats.reviewers

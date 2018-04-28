@@ -31,7 +31,7 @@ class Event(PyGithubObjectWrapper, APIclass):
         # Fetching actor
         actor = data.get('actor')
         if actor:
-            artifacts['actor'] = self.client.get_user(actor['login'])
+            artifacts['actor'] = self.Endpoint.client.get_user(actor['login'])
         # Fetching issue
         issue_data = getnode(data, ['payload', 'issue']) or data.get('issue')
         if issue_data:
@@ -45,7 +45,7 @@ class Event(PyGithubObjectWrapper, APIclass):
         comment_data = getnode(data, ['payload', 'comment'])
         if comment_data:
             try:
-                artifacts['comment'] = issue.get_comment(comment_data['id'])
+                artifacts['comment'] = artifacts['repo'].get_comment(comment_data['id'])
             except UnknownObjectException:
                 pass  # Happens when the comment is deleted.
 

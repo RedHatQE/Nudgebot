@@ -1,5 +1,5 @@
 """Base classes for Github third party Endpoint."""
-from types import FunctionType, MethodType
+from types import FunctionType, MethodType, GeneratorType
 
 from cached_property import cached_property
 from github import Github as GithubClient
@@ -41,6 +41,7 @@ class GithubObject(APIclass):
         """
         @keyword parent: `GithubObject` The parent object.
         """
+        assert parent is None or isinstance(parent, GithubObject)
         self._parent = None
         if parent is not None:
             self.set_parent(parent)
@@ -53,6 +54,20 @@ class GithubObject(APIclass):
     @property
     def parent(self):
         return self._parent
+
+    @property
+    def parents(self):
+        parents = []
+        node = self.parent
+        while node:
+            parents.append(node)
+            node = node.parent
+        return parents
+
+    @property
+    def top_parent(self):
+        parents = self.parents
+        return (parents[-1] if parents else None)
 
 
 class PyGithubObjectWrapper(GithubObject):
@@ -93,6 +108,26 @@ class PyGithubObjectWrapper(GithubObject):
         return '<{}({}) | {}>'.format(
             self.__class__.__name__, PyGithubObjectWrapper.__name__, self._pygithub_object.__repr__())
 
+    @staticmethod
+    def _single_wrap(pygithub_object, parent=None, raise_when_not_found=True):
+        """
+        Detect the related local class and wrapping the pygithub object.
+
+        e.g. PyGithubObjectWrapper._single_wrap(Repository(full_name="octocat/Hello-World")) -->
+                gitwise.Repository(full_name="octocat/Hello-World").
+        @param pygithub_object: `PyGithubObject` The pygithub object to _single_wrap.
+        @keyword parent: `PyGithubObjectWrapper` The parent object.
+        @keyword raise_when_not_found: `bool` Whether to raise exception if
+                                       no such wrapper found or just return the input.
+        """
+        for cls in PyGithubObjectWrapper.get_subclasses():
+            for pgc in (cls.PyGithubClass if isinstance(cls.PyGithubClass, (list, tuple)) else (cls.PyGithubClass, )):
+                if pgc == getattr(pygithub_object, '__class__', None):
+                    return cls(pygithub_object, parent=parent)
+        if raise_when_not_found:
+            raise NoWrapperForPyGithubObjectException(pygithub_object)
+        return pygithub_object  # Sometimes it could be a primitive type like `int`
+
     @classmethod
     def get_subclasses(cls):
         """Get subclasses."""
@@ -111,47 +146,49 @@ class PyGithubObjectWrapper(GithubObject):
         raise NotImplementedError(str(cls))
 
     @classmethod
-    def wrap(cls, pygithub_object, parent=None, raise_when_not_found=True):
+    def wrap(cls, value, parent=None, raise_when_not_found=True):
         """
-        Detect the related local class and wrapping the pygithub object.
+        Convert the value to local class.
 
-        e.g. PyGithubObjectWrapper.wrap(Repository(full_name="octocat/Hello-World")) -->
-                Repository(PyGithubObjectWrapper) | Repository(full_name="octocat/Hello-World").
-        @param pygithub_object: `PyGithubObject` The pygithub object to wrap.
-        @keyword parent: `PyGithubObjectWrapper` The parent object.
-        @keyword raise_when_not_found: `bool` Whether to raise exception if
-                                       no such wrapper found or just return the input.
+        In case that the object is coming in as a plural or as non-cached, It's performing a nested wrapping.
         """
-        for cls in cls.get_subclasses():
-            for pgc in (cls.PyGithubClass if isinstance(cls.PyGithubClass, (list, tuple)) else (cls.PyGithubClass, )):
-                if pgc == getattr(pygithub_object, '__class__', None):
-                    return cls(pygithub_object, parent=parent)
-        if raise_when_not_found:
-            raise NoWrapperForPyGithubObjectException(pygithub_object)
-        return pygithub_object  # Sometimes it could be a primitive type like `int`
-
-    def _convert_to_local(self, value):
-        """Convert the value to local class."""
         if isinstance(value, (MethodType, FunctionType)):
-            def wrapper(*args, **kwargs):
-                return self._convert_to_local(value(*args, **kwargs))
-            return wrapper
-        elif isinstance(value, PaginatedList):
+            # Non-cached - wrapping inside a getter
+            def getter(*args, **kwargs):
+                return cls.wrap(value(*args, **kwargs), parent=parent, raise_when_not_found=raise_when_not_found)
+            return getter
+        elif isinstance(value, (PaginatedList, GeneratorType)):
+            # A generator
             def iterator():
                 for pygithub_object in value:
-                    yield self.wrap(pygithub_object, parent=self, raise_when_not_found=False)
+                    yield cls.wrap(pygithub_object, parent=parent, raise_when_not_found=raise_when_not_found)
             return iterator()
-        return self.wrap(value, parent=self, raise_when_not_found=False)
+        elif isinstance(value, (list, tuple, set)):
+            # A sequence
+            return type(value)([cls.wrap(v, raise_when_not_found=raise_when_not_found) for v in value])
+        elif isinstance(value, dict):
+            # A mapping
+            return {
+                cls.wrap(k, raise_when_not_found=raise_when_not_found):
+                cls.wrap(v, raise_when_not_found=raise_when_not_found)
+                for k, v in value.items()
+            }
+        # Probably some other primitive type like `int`, `str`, etc.
+        return cls._single_wrap(value, parent=parent, raise_when_not_found=raise_when_not_found)
 
     def __getattr__(self, name):
-        retval = getattr(self.api, name)
-        return self._convert_to_local(retval)
+        return self.wrap(getattr(self.pygithub_object, name), parent=self, raise_when_not_found=False)
 
     def set_parent(self, parent):
         assert isinstance(parent, PyGithubObjectWrapper), \
             f'Parent must be an instance of {PyGithubObjectWrapper.__name__}, ' \
             f'not {getattr(type(parent), "__name__", type(parent))}'
         self._parent = parent
+
+    @property
+    def pygithub_object(self):
+        """Return the pygithub object."""
+        return self._pygithub_object
 
     @property
     def parent(self):
