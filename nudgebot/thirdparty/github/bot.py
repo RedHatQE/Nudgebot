@@ -82,7 +82,7 @@ class GithubEventsFactory(EventsFactory):
                     except UnknownObjectException:
                         break  # stale event
                     # Fill some required fields that could be missing in the timeline API but
-                    data['organization'], data['repository'] = repo.owner.name or repo.owner.login, repo.name
+                    data['organization'], data['repository'] = getattr(repo.owner, 'login', repo.owner.name), repo.name
                     data['sender'] = {'login': event.actor.login}
                     data['type'] = data.get('type') or data.get('event')
                     # Gathering facts

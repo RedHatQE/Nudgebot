@@ -3,12 +3,12 @@ from github.Event import Event as PyGithubEvent
 from github.IssueEvent import IssueEvent as PyGithubIssueEvent
 from github.GithubException import UnknownObjectException
 
+from nudgebot.utils import getnode
 from nudgebot.thirdparty.github.base import PyGithubObjectWrapper
 from nudgebot.thirdparty.base import APIclass
-
-from nudgebot.utils import getnode
 from nudgebot.thirdparty.github.organization import Organization
 from nudgebot.thirdparty.github.repository import Repository
+from nudgebot.thirdparty.github.user import User
 
 
 class Event(PyGithubObjectWrapper, APIclass):
@@ -26,7 +26,7 @@ class Event(PyGithubObjectWrapper, APIclass):
 
         if isinstance(self.pygithub_object, PyGithubIssueEvent):
             data['type'] = 'IssuesEvent'
-        artifacts['org'] = next(parent for parent in self.parents if isinstance(parent, Organization))
+        artifacts['org'] = next(parent for parent in self.parents if isinstance(parent, (Organization, User)))
         artifacts['repo'] = next(parent for parent in self.parents if isinstance(parent, Repository))
         # Fetching actor
         actor = data.get('actor')
@@ -41,12 +41,12 @@ class Event(PyGithubObjectWrapper, APIclass):
             except UnknownObjectException:
                 issue = artifacts['repo'].get_issue(number)
             artifacts['issue'] = issue
-        # Fetching comment
-        comment_data = getnode(data, ['payload', 'comment'])
-        if comment_data:
-            try:
-                artifacts['comment'] = artifacts['repo'].get_comment(comment_data['id'])
-            except UnknownObjectException:
-                pass  # Happens when the comment is deleted.
+            # Fetching comment
+            comment_data = getnode(data, ['payload', 'comment'])
+            if comment_data:
+                try:
+                    artifacts['comment'] = issue.get_issue_comment(comment_data['id'])
+                except UnknownObjectException:
+                    pass  # Happens when the comment is deleted.
 
-        return artifacts
+            return artifacts

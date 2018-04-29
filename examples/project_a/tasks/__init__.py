@@ -97,7 +97,7 @@ class AlertOnMentionedUser(ConditionalTask):
         Checking that the task triggered by event, the event is a comment event
         and there are mentioned users in the comment.
         """
-        return self.event and self.event.artifacts.get('comment') and self.event.artifacts['comment'].mentioned_users
+        return bool(self.event and self.event.artifacts.get('comment') and self.event.artifacts['comment'].mentioned_users)
 
     def run(self):
         mentioned, actor = self.event.artifacts['comment'].mentioned_users, self.event.artifacts['actor']
@@ -113,7 +113,7 @@ class AlertOnMentionedUser(ConditionalTask):
                 '##bot-testing', f'{mentioned_user}, {actor} has '
                 f'mentioned you in {self.statistics.my_repo_statistics.organization}/'
                 f'{self.statistics.my_repo_statistics.repository} '
-                f'@ PR#{self.statistics.my_pulls_statistics.number}.'
+                f'@ PR#{self.statistics.my_pulls_statistics.issue_number}.'
             )
 
 

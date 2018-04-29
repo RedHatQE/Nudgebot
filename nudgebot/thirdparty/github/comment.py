@@ -23,7 +23,7 @@ class Comment(PyGithubObjectWrapper, APIclass):
         mentioned_users = []
         for login in set(re.findall(r' @([\-\w\d_]+)', ' ' + self.body)):
             try:
-                mentioned_users.append(self.Endpoint.get_user(login))
+                mentioned_users.append(self.Endpoint.client.get_user(login))
             except UnknownObjectException:
                 pass
         return mentioned_users
