@@ -20,6 +20,12 @@ def get_statistics():
     return out
 
 
+@app.route('/scripts/<filename>')
+def get_script(filename):
+    with open(os.path.join(os.path.dirname(__file__), f'assets/js/{filename}')) as f:
+        return f.read()
+
+
 @app.route('/statistics', methods=['GET'])
 def statistics():
     return jsonify(get_statistics())
@@ -27,7 +33,7 @@ def statistics():
 
 @app.route('/dashboard', methods=['GET'])
 def dashboard():
-    with open(f'{os.path.dirname(__file__)}/dashboard.html', 'r') as f:
+    with open(f'{os.path.dirname(__file__)}/index.html', 'r') as f:
         template = Template(f.read())
         data = get_statistics()
         return template.render(data=data)

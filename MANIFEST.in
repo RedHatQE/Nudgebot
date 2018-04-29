@@ -1,1 +1,2 @@
-include nudgebot/server/dashboard.html
+include nudgebot/server/index.html
+include nudgebot/server/assets/js/refresh.html
