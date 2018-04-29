@@ -97,7 +97,8 @@ class AlertOnMentionedUser(ConditionalTask):
         Checking that the task triggered by event, the event is a comment event
         and there are mentioned users in the comment.
         """
-        return bool(self.event and self.event.artifacts.get('comment') and self.event.artifacts['comment'].mentioned_users)
+        return bool(self.event and self.event.artifacts and
+                    self.event.artifacts.get('comment') and self.event.artifacts['comment'].mentioned_users)
 
     def run(self):
         mentioned, actor = self.event.artifacts['comment'].mentioned_users, self.event.artifacts['actor']

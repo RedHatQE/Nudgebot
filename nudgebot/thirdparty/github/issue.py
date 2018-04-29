@@ -17,7 +17,7 @@ class Issue(PyGithubObjectWrapper, GithubScope):
     def instantiate(cls, repository, number):
         assert isinstance(repository, Repository)
         assert isinstance(number, int)
-        return cls(repository.api.get_pull(number), repository)
+        return cls(repository.api.get_issue(number), repository)
 
     @classmethod
     def init_by_keys(cls, **query):
