@@ -104,7 +104,7 @@ Once you run it, it'll run the celery app in the background, create an initial p
 To run the dashboard app that present the statistics:
 ```python main.py run_server```
 Then you'll have a dashboard that presents all the collected statistics. for example, the dashboard of project_a will be:
-![alt text](https://raw.githubusercontent.com/gshefer/Nudgebot/master/docs/project_b_dashboard.png)
+![alt text](https://raw.githubusercontent.com/gshefer/Nudgebot/master/docs/dashboard.gif)
 
 
 ---

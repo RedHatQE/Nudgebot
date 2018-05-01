@@ -1,2 +1,3 @@
 include nudgebot/server/index.html
-include nudgebot/server/assets/js/refresh.html
+include nudgebot/server/assets/js/refresh.js
+include nudgebot/server/assets/js/app.js
